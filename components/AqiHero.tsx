@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useSyncExternalStore, type FormEvent } from 'react';
 import {
   Activity,
   AlertOctagon,
@@ -72,7 +72,7 @@ const ACTION_TILES: Array<{
     id: 'tile-aqi',
     title: 'Explore AQI',
     subtitle: 'Check live PM2.5 & smog levels',
-    bgClass: 'bg-[#4D7C0F] hover:bg-[#3F6212]',
+    bgClass: 'bg-gradient-to-b from-[#4F7D18]/92 via-[#3F6B12]/92 to-[#2F530B]/95',
     icon: Search,
     targetId: 'live-aqi-bar',
   },
@@ -80,7 +80,7 @@ const ACTION_TILES: Array<{
     id: 'tile-routine',
     title: 'Daily Timing',
     subtitle: 'Beat morning inversion peaks',
-    bgClass: 'bg-[#C2410C] hover:bg-[#9A3412]',
+    bgClass: 'bg-gradient-to-b from-[#6B5DF6]/92 via-[#5846E5]/92 to-[#4533CD]/95',
     icon: Clock,
     targetId: 'action-plan',
     tab: 'routine',
@@ -89,7 +89,7 @@ const ACTION_TILES: Array<{
     id: 'tile-indoor',
     title: 'Indoor Hacks',
     subtitle: 'DIY filters & humidity tips',
-    bgClass: 'bg-[#0F766E] hover:bg-[#115E59]',
+    bgClass: 'bg-gradient-to-b from-[#1698A8]/92 via-[#0E7C8D]/92 to-[#0B6473]/95',
     icon: Home,
     targetId: 'action-plan',
     tab: 'indoor',
@@ -98,7 +98,7 @@ const ACTION_TILES: Array<{
     id: 'tile-swaps',
     title: 'Clean Swaps',
     subtitle: 'Low-smoke cooking & travel',
-    bgClass: 'bg-[#B45309] hover:bg-[#92400E]',
+    bgClass: 'bg-gradient-to-b from-[#C76512]/92 via-[#B45309]/92 to-[#92400E]/95',
     icon: Leaf,
     targetId: 'action-plan',
     tab: 'sustainable',
@@ -107,7 +107,7 @@ const ACTION_TILES: Array<{
     id: 'tile-protect',
     title: 'Family Care',
     subtitle: 'Kids, seniors & asthma safety',
-    bgClass: 'bg-[#047857] hover:bg-[#065F46]',
+    bgClass: 'bg-gradient-to-b from-[#0E8F64]/92 via-[#047857]/92 to-[#065F46]/95',
     icon: HeartHandshake,
     targetId: 'action-plan',
     tab: 'vulnerable',
@@ -116,11 +116,15 @@ const ACTION_TILES: Array<{
     id: 'tile-impact',
     title: 'Impact Check',
     subtitle: 'Compare before vs. after',
-    bgClass: 'bg-[#B93815] hover:bg-[#992C0F]',
+    bgClass: 'bg-gradient-to-b from-[#D85327]/92 via-[#C2410C]/92 to-[#9A3412]/95',
     icon: BarChart3,
     targetId: 'impact',
   },
 ];
+
+function subscribeNoop(): () => void {
+  return () => {};
+}
 
 /**
  * Hero banner over the animated Earth sky layer (left-to-right moving clouds and flying birds)
@@ -139,6 +143,11 @@ export function AqiHero({
 }: AqiHeroProps) {
   const [cityQuery, setCityQuery] = useState('');
   const [inputError, setInputError] = useState<string | null>(null);
+  const hasMounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  );
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -162,6 +171,7 @@ export function AqiHero({
   };
 
   const formattedTime = (() => {
+    if (!hasMounted) return 'Latest reading';
     try {
       const date = new Date(aqi.observedAt);
       if (Number.isNaN(date.getTime())) return 'Latest reading';
@@ -189,19 +199,17 @@ export function AqiHero({
               className="text-4xl font-bold tracking-tight text-[#123D2B] dark:text-white sm:text-5xl [text-wrap:balance]"
             >
               Clean Air Every Day{' '}
-              <span className="block text-[#C2410C] dark:text-[#FF8A4C]">
-                For Every Family
-              </span>
+              <span className="block text-[#C2410C] dark:text-[#FF8A4C]">For Every Family</span>
             </h1>
             <p className="mt-3.5 mx-auto lg:mx-0 max-w-xl text-base leading-relaxed text-slate-800 dark:text-slate-200">
-              Navigate winter smog with live neighborhood air quality, budget-fit indoor air
-              hacks, and hands-on daily protection for kids, elders, and sensitive lungs.
+              Navigate winter smog with live neighborhood air quality, budget-fit indoor air hacks,
+              and hands-on daily protection for kids, elders, and sensitive lungs.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <a
                 href="#profile-section"
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#C2410C] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#9A3412] transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C2410C] focus-visible:ring-offset-2 dark:bg-[#D95B26] dark:hover:bg-[#C2410C]"
+                className="liquid-btn-primary inline-flex min-h-[44px] items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] focus-visible:ring-offset-2"
               >
                 <span>Start Your Air Plan</span>
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -211,12 +219,15 @@ export function AqiHero({
                 type="button"
                 onClick={onUseGeolocation}
                 disabled={isLocating || isLoading}
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-sky-200 bg-white/90 px-4 py-2.5 text-sm font-semibold text-[#164A32] backdrop-blur-xs hover:bg-white disabled:opacity-60 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164A32] dark:border-sky-800/60 dark:bg-[#131F1B]/90 dark:text-emerald-200 dark:hover:bg-[#192822]"
+                className="liquid-btn-glass inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-[#123D2B] disabled:opacity-60 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-sky-100"
               >
                 {isLocating ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Navigation className="h-4 w-4 text-[#C2410C] dark:text-[#FF8A4C]" aria-hidden="true" />
+                  <Navigation
+                    className="h-4 w-4 text-[#5846E5] dark:text-sky-300"
+                    aria-hidden="true"
+                  />
                 )}
                 <span>Use My Location</span>
               </button>
@@ -225,7 +236,7 @@ export function AqiHero({
                 type="button"
                 onClick={onToggleTheme}
                 aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-sky-200 bg-white/90 text-[#164A32] backdrop-blur-xs hover:bg-white transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164A32] dark:border-sky-800/60 dark:bg-[#131F1B]/90 dark:text-emerald-200 dark:hover:bg-[#192822]"
+                className="liquid-btn-glass inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-[#123D2B] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-sky-100"
               >
                 {theme === 'dark' ? (
                   <Sun className="h-4 w-4" aria-hidden="true" />
@@ -237,14 +248,16 @@ export function AqiHero({
           </div>
 
           <div className="lg:col-span-6">
-            <div className="aspect-[4/3] w-full overflow-hidden rounded-3xl border border-white/80 bg-white/80 shadow-md dark:border-sky-900/50 dark:bg-[#131F1B]">
-              <SmartImage
-                src={heroDioramaImg}
-                alt="Illustrated clean-air neighborhood island with cozy homes, pine trees, solar panels, and a bicycle path"
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="h-full w-full object-cover"
-              />
+            <div className="liquid-glass-card aspect-[4/3] w-full overflow-hidden rounded-3xl p-2">
+              <div className="h-full w-full overflow-hidden rounded-2xl">
+                <SmartImage
+                  src={heroDioramaImg}
+                  alt="Illustrated clean-air neighborhood island with cozy homes, pine trees, solar panels, and a bicycle path"
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="h-full w-full object-cover"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -268,15 +281,17 @@ export function AqiHero({
                   key={tile.id}
                   type="button"
                   onClick={() => handleTileClick(tile.targetId, tile.tab)}
-                  className={`group flex min-h-[148px] flex-col items-center justify-between rounded-2xl p-4 text-center text-white shadow-sm transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164A32] focus-visible:ring-offset-2 ${tile.bgClass}`}
+                  className={`liquid-tile group flex min-h-[152px] flex-col items-center justify-between rounded-3xl p-4 text-center text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] focus-visible:ring-offset-2 ${tile.bgClass}`}
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/18">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/50 bg-white/22 shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)]">
                     <Icon className="h-6 w-6 text-white" aria-hidden="true" />
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-sm font-bold leading-tight">{tile.title}</p>
-                    <p className="mt-1 text-xs leading-snug text-white/95">{tile.subtitle}</p>
-                  </div>
+                  </span>
+                  <span className="mt-3 block">
+                    <span className="block text-sm font-bold leading-tight">{tile.title}</span>
+                    <span className="mt-1 block text-xs leading-snug text-white/95">
+                      {tile.subtitle}
+                    </span>
+                  </span>
                 </button>
               );
             })}
@@ -288,7 +303,7 @@ export function AqiHero({
           <form
             onSubmit={handleSubmit}
             noValidate
-            className="rounded-2xl border border-sky-200/80 bg-white/92 p-3 shadow-sm backdrop-blur-xs dark:border-sky-900/50 dark:bg-[#131F1B]/92"
+            className="liquid-glass-card-aqua rounded-3xl p-3"
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="relative flex-1">
@@ -296,7 +311,7 @@ export function AqiHero({
                   Check live air quality by city
                 </label>
                 <MapPin
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#164A32] dark:text-emerald-300"
+                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0E7C8D] dark:text-sky-300"
                   aria-hidden="true"
                 />
                 <input
@@ -310,14 +325,14 @@ export function AqiHero({
                   placeholder="Check live AQI for any city (e.g., New Delhi, Lahore, Beijing, Salt Lake City)"
                   aria-describedby={inputError ? 'hero-city-error' : undefined}
                   aria-invalid={Boolean(inputError)}
-                  className="min-h-[46px] w-full rounded-xl border border-sky-200 bg-sky-50/60 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164A32] dark:border-sky-900/50 dark:bg-[#0B1410] dark:text-slate-100 dark:placeholder:text-slate-400"
+                  className="liquid-input min-h-[46px] w-full rounded-full pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100 dark:placeholder:text-slate-400"
                 />
               </div>
 
               <div className="flex items-center justify-between gap-3 sm:justify-end">
-                <div className="hidden md:flex items-center gap-2 px-2 text-xs text-slate-600 dark:text-slate-300">
+                <div className="hidden md:flex items-center gap-2 px-2 text-xs text-slate-700 dark:text-slate-200">
                   <span>Monitoring:</span>
-                  <span className="font-semibold text-[#164A32] dark:text-emerald-200 max-w-[160px] truncate">
+                  <span className="font-semibold text-[#123D2B] dark:text-sky-200 max-w-[160px] truncate">
                     {aqi.locationName}
                   </span>
                 </div>
@@ -325,7 +340,7 @@ export function AqiHero({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="inline-flex min-h-[46px] w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-[#164A32] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#103826] disabled:opacity-60 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164A32] focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-600"
+                  className="liquid-btn-secondary inline-flex min-h-[46px] w-full sm:w-auto items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold disabled:opacity-60 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E7C8D] focus-visible:ring-offset-2"
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -338,7 +353,7 @@ export function AqiHero({
             </div>
 
             {inputError && (
-              <p id="hero-city-error" className="mt-2 px-1 text-xs text-red-700 dark:text-red-400">
+              <p id="hero-city-error" className="mt-2 px-2 text-xs text-red-700 dark:text-red-400">
                 {inputError}
               </p>
             )}
@@ -348,7 +363,7 @@ export function AqiHero({
             <div
               role="status"
               aria-live="polite"
-              className="flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50/95 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/80 dark:text-amber-200"
+              className="liquid-glass-card-warm flex items-start gap-2.5 rounded-2xl px-4 py-3 text-sm text-amber-950 dark:text-amber-200"
             >
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>{error}</span>
@@ -361,19 +376,19 @@ export function AqiHero({
                 className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-pulse"
                 aria-label="Loading air quality metrics"
               >
-                <div className="h-24 rounded-2xl bg-white/85 dark:bg-[#131F1B]" />
-                <div className="h-24 rounded-2xl bg-white/85 dark:bg-[#131F1B]" />
-                <div className="h-24 rounded-2xl bg-white/85 dark:bg-[#131F1B]" />
-                <div className="h-24 rounded-2xl bg-white/85 dark:bg-[#131F1B]" />
+                <div className="liquid-glass-card h-24 rounded-3xl" />
+                <div className="liquid-glass-card h-24 rounded-3xl" />
+                <div className="liquid-glass-card h-24 rounded-3xl" />
+                <div className="liquid-glass-card h-24 rounded-3xl" />
               </div>
             ) : (
               <>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div
-                    className={`flex items-center gap-3.5 rounded-2xl border p-4 backdrop-blur-xs ${aqi.category.surfaceClass} ${aqi.category.borderClass}`}
+                    className={`liquid-glass-card flex items-center gap-3.5 rounded-3xl p-4 ${aqi.category.borderClass}`}
                   >
                     <div
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/90 dark:bg-slate-900/70 ${aqi.category.textClass}`}
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/85 shadow-xs dark:border-white/20 dark:bg-slate-900/70 ${aqi.category.textClass}`}
                     >
                       <CategoryIcon icon={aqi.category.icon} className="h-6 w-6" />
                     </div>
@@ -390,61 +405,61 @@ export function AqiHero({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3.5 rounded-2xl border border-sky-200/80 bg-white/92 p-4 backdrop-blur-xs dark:border-sky-900/50 dark:bg-[#131F1B]/92">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#EBF5E6] text-[#164A32] dark:bg-[#192822] dark:text-emerald-300">
+                  <div className="liquid-glass-card-mint flex items-center gap-3.5 rounded-3xl p-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/85 text-[#164A32] shadow-xs dark:border-white/20 dark:bg-white/10 dark:text-emerald-300">
                       <CloudFog className="h-5 w-5" aria-hidden="true" />
                     </div>
                     <div>
                       <p className="font-mono text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
                         {aqi.pm25}{' '}
-                        <span className="text-xs font-sans font-normal text-slate-600 dark:text-slate-400">
+                        <span className="text-xs font-sans font-normal text-slate-600 dark:text-slate-300">
                           µg/m³
                         </span>
                       </p>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         PM2.5 Fine Dust
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3.5 rounded-2xl border border-sky-200/80 bg-white/92 p-4 backdrop-blur-xs dark:border-sky-900/50 dark:bg-[#131F1B]/92">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#E5F2F8] text-[#0F766E] dark:bg-[#192822] dark:text-teal-300">
+                  <div className="liquid-glass-card-aqua flex items-center gap-3.5 rounded-3xl p-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/85 text-[#0E7C8D] shadow-xs dark:border-white/20 dark:bg-white/10 dark:text-teal-300">
                       <Wind className="h-5 w-5" aria-hidden="true" />
                     </div>
                     <div>
                       <p className="font-mono text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
                         {aqi.pm10}{' '}
-                        <span className="text-xs font-sans font-normal text-slate-600 dark:text-slate-400">
+                        <span className="text-xs font-sans font-normal text-slate-600 dark:text-slate-300">
                           µg/m³
                         </span>
                       </p>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         PM10 Coarse Dust
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3.5 rounded-2xl border border-sky-200/80 bg-white/92 p-4 backdrop-blur-xs dark:border-sky-900/50 dark:bg-[#131F1B]/92">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FBF0D9] text-[#C2410C] dark:bg-[#192822] dark:text-[#FF8A4C]">
+                  <div className="liquid-glass-card-iridescent flex items-center gap-3.5 rounded-3xl p-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/85 text-[#5846E5] shadow-xs dark:border-white/20 dark:bg-white/10 dark:text-indigo-300">
                       <Activity className="h-5 w-5" aria-hidden="true" />
                     </div>
                     <div>
                       <p className="font-mono text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
                         {aqi.no2}{' '}
-                        <span className="text-xs font-sans font-normal text-slate-600 dark:text-slate-400">
+                        <span className="text-xs font-sans font-normal text-slate-600 dark:text-slate-300">
                           µg/m³
                         </span>
                       </p>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         NO2 Exhaust Gas
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-sky-200/80 bg-white/92 px-5 py-4 backdrop-blur-xs dark:border-sky-900/50 dark:bg-[#131F1B]/92">
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                    <span className="font-semibold text-[#164A32] dark:text-emerald-200">
+                <div className="liquid-glass-card rounded-3xl px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                    <span className="font-semibold text-[#123D2B] dark:text-emerald-200">
                       {aqi.locationName}
                     </span>
                     <span aria-hidden="true">·</span>
@@ -454,10 +469,10 @@ export function AqiHero({
                     <span aria-hidden="true">·</span>
                     <span className="font-mono tabular-nums">{aqi.category.rangeLabel}</span>
                   </div>
-                  <p className="mt-1.5 text-sm font-medium text-slate-800 dark:text-slate-100">
+                  <p className="mt-1.5 text-sm font-medium text-slate-900 dark:text-slate-100">
                     {aqi.category.healthGuidance}
                   </p>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">
                     Winter smog context: {aqi.category.winterSmogNote}
                   </p>
                 </div>

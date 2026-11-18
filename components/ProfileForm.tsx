@@ -90,7 +90,9 @@ export function ProfileForm({
       const firstIssue = parsed.error.issues[0];
       if (firstIssue?.path.includes('city')) {
         setCityError(firstIssue.message);
+        setFormError(null);
       } else {
+        setCityError(null);
         setFormError(firstIssue?.message ?? 'Please review your profile inputs.');
       }
       return;
@@ -105,20 +107,17 @@ export function ProfileForm({
     <section
       id="profile-section"
       aria-labelledby="profile-heading"
-      className="rounded-2xl border border-[#E2E4DA] bg-white p-5 sm:p-6 dark:border-emerald-900/40 dark:bg-[#131F1B]"
+      className="liquid-glass-card rounded-3xl p-5 sm:p-6"
     >
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EFECE3] text-[#1E4D3B] dark:bg-[#192822] dark:text-emerald-300">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/85 text-[#5846E5] shadow-xs dark:border-white/20 dark:bg-white/10 dark:text-indigo-300">
           <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
         </div>
         <div>
-          <h2
-            id="profile-heading"
-            className="text-lg font-bold text-[#1E4D3B] dark:text-white"
-          >
+          <h2 id="profile-heading" className="text-lg font-bold text-[#123D2B] dark:text-white">
             Household &amp; Lifestyle Profile
           </h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-slate-700 dark:text-slate-300">
             Tailor routines, indoor air hacks, and budget-fit swaps.
           </p>
         </div>
@@ -150,14 +149,14 @@ export function ProfileForm({
             aria-describedby={cityError ? 'profile-city-error' : 'profile-city-hint'}
             aria-invalid={Boolean(cityError)}
             placeholder="e.g., New Delhi, Lahore, Beijing, Salt Lake City"
-            className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#D4D8CB] bg-[#FAF9F5] px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] dark:border-emerald-900/50 dark:bg-[#0D1512] dark:text-slate-100"
+            className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-4 text-sm text-slate-900 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100 dark:placeholder:text-slate-400"
           />
           {cityError ? (
             <p id="profile-city-error" className="mt-1 text-xs text-red-700 dark:text-red-400">
               {cityError}
             </p>
           ) : (
-            <p id="profile-city-hint" className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p id="profile-city-hint" className="mt-1 text-xs text-slate-600 dark:text-slate-300">
               Location stays in your browser unless submitted for live AQI or plan generation.
             </p>
           )}
@@ -173,17 +172,17 @@ export function ProfileForm({
               return (
                 <label
                   key={option.id}
-                  className={`flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                  className={`flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-2xl border px-3 py-2 text-sm transition-all ${
                     checked
-                      ? 'border-[#1E4D3B] bg-[#EEF4F0] text-[#1E4D3B] font-medium dark:border-emerald-500 dark:bg-emerald-950/60 dark:text-emerald-200'
-                      : 'border-[#E2E4DA] bg-[#FAF9F5] text-slate-700 hover:bg-[#EFECE3] dark:border-emerald-900/40 dark:bg-[#0D1512] dark:text-slate-300 dark:hover:bg-[#192822]'
+                      ? 'border-[#5846E5]/60 bg-indigo-50/80 text-[#3730A3] font-medium shadow-[inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-indigo-400/50 dark:bg-indigo-950/60 dark:text-indigo-200'
+                      : 'border-white/80 bg-white/65 text-slate-700 hover:bg-white/85 shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)] dark:border-white/15 dark:bg-white/8 dark:text-slate-200 dark:hover:bg-white/14'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleHouseholdGroup(option.id)}
-                    className="h-4 w-4 rounded border-slate-300 accent-[#1E4D3B] focus:ring-[#1E4D3B]"
+                    className="h-4 w-4 rounded border-slate-300 accent-[#5846E5] focus:ring-[#5846E5]"
                   />
                   <span className="leading-snug">{option.label}</span>
                 </label>
@@ -206,7 +205,7 @@ export function ProfileForm({
               onChange={(e) =>
                 onProfileChange({ ...profile, commuteMode: e.target.value as CommuteMode })
               }
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#D4D8CB] bg-[#FAF9F5] px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] dark:border-emerald-900/50 dark:bg-[#0D1512] dark:text-slate-100"
+              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
             >
               <option value="public_transit">Public transit (bus/metro)</option>
               <option value="walking_cycling">Walking or cycling</option>
@@ -229,7 +228,7 @@ export function ProfileForm({
               onChange={(e) =>
                 onProfileChange({ ...profile, homeType: e.target.value as HomeType })
               }
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#D4D8CB] bg-[#FAF9F5] px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] dark:border-emerald-900/50 dark:bg-[#0D1512] dark:text-slate-100"
+              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
             >
               <option value="apartment">Apartment / flat</option>
               <option value="detached_house">Detached house</option>
@@ -251,7 +250,7 @@ export function ProfileForm({
               onChange={(e) =>
                 onProfileChange({ ...profile, ventilation: e.target.value as VentilationType })
               }
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#D4D8CB] bg-[#FAF9F5] px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] dark:border-emerald-900/50 dark:bg-[#0D1512] dark:text-slate-100"
+              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
             >
               <option value="natural_windows">Natural window drafts</option>
               <option value="exhaust_fans">Kitchen / bath exhaust fans</option>
@@ -273,7 +272,7 @@ export function ProfileForm({
               onChange={(e) =>
                 onProfileChange({ ...profile, heatingSource: e.target.value as HeatingSource })
               }
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#D4D8CB] bg-[#FAF9F5] px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] dark:border-emerald-900/50 dark:bg-[#0D1512] dark:text-slate-100"
+              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
             >
               <option value="electric">Electric / heat pump</option>
               <option value="natural_gas">Natural gas / boiler</option>
@@ -296,7 +295,7 @@ export function ProfileForm({
               onChange={(e) =>
                 onProfileChange({ ...profile, cookingFuel: e.target.value as CookingFuel })
               }
-              className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#D4D8CB] bg-[#FAF9F5] px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] dark:border-emerald-900/50 dark:bg-[#0D1512] dark:text-slate-100"
+              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
             >
               <option value="induction">Induction cooktop</option>
               <option value="electric_coil">Standard electric stove</option>
@@ -319,10 +318,10 @@ export function ProfileForm({
                   type="button"
                   aria-pressed={selected}
                   onClick={() => onProfileChange({ ...profile, budget: opt.id })}
-                  className={`flex min-h-[48px] flex-col items-start justify-center rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] ${
+                  className={`flex min-h-[48px] flex-col items-start justify-center rounded-2xl border px-3 py-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] ${
                     selected
-                      ? 'border-[#1E4D3B] bg-[#EEF4F0] text-[#1E4D3B] dark:border-emerald-500 dark:bg-emerald-950/60 dark:text-emerald-200'
-                      : 'border-[#E2E4DA] bg-[#FAF9F5] text-slate-700 hover:bg-[#EFECE3] dark:border-emerald-900/40 dark:bg-[#0D1512] dark:text-slate-300 dark:hover:bg-[#192822]'
+                      ? 'liquid-tab-active font-semibold'
+                      : 'liquid-btn-glass text-slate-800 dark:text-slate-200'
                   }`}
                 >
                   <span className="text-sm font-semibold">{opt.label}</span>
@@ -337,7 +336,7 @@ export function ProfileForm({
           type="submit"
           disabled={isGenerating}
           aria-busy={isGenerating}
-          className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[#C9482B] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#B23C22] disabled:opacity-60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C9482B] focus-visible:ring-offset-2 dark:bg-[#D95B3D] dark:hover:bg-[#C9482B]"
+          className="liquid-btn-primary inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] focus-visible:ring-offset-2"
         >
           {isGenerating ? (
             <>

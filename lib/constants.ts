@@ -52,6 +52,7 @@ export const FALLBACK_AQI_VALUES = {
   no2: 54.2,
   latitude: 28.6139,
   longitude: 77.209,
+  observedAt: '2026-01-15T08:00:00.000Z',
 } as const;
 
 /** Standard medical & estimate disclaimer copy. */

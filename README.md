@@ -7,21 +7,25 @@ AirWise is a GenAI-powered urban air quality and winter-smog assistant built wit
 ## Setup & Running Locally
 
 1. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 2. **Configure environment variables:**
    Copy `.env.example` to `.env.local` and set your server-side Gemini API key:
+
    ```bash
    GEMINI_API_KEY="your_actual_gemini_api_key"
    APP_URL="http://localhost:3000"
    ```
 
 3. **Start the development server:**
+
    ```bash
    npm run dev
    ```
+
    Open [http://localhost:3000](http://localhost:3000).
 
 4. **Production build:**
@@ -73,6 +77,7 @@ npm test
 ```
 
 Coverage includes:
+
 - **Unit tests** (`__tests__/aqi.test.ts`, `sanitize.test.ts`, `schemas.test.ts`, `rateLimit.test.ts`, `impact.test.ts`): AQI category mapping & PM2.5 breakpoints, input sanitization & prompt-injection stripping, Zod request/response schemas, per-IP rate limiter, and impact calculations.
 - **Component tests** (`__tests__/components.test.tsx`): Profile form validation & submission, category tab filtering, and `localStorage` checklist persistence/reset.
 - **API route tests** (`__tests__/api-routes.test.ts`): `/api/aqi`, `/api/recommend`, and `/api/chat` with mocked Open-Meteo `fetch` and mocked `@google/genai` covering success, invalid input, and upstream failures.

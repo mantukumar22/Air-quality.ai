@@ -159,6 +159,39 @@ describe('AirWise API Route Handlers', () => {
       expect(res.status).toBe(502);
       expect(mockGenerateContent).toHaveBeenCalledTimes(2);
     });
+
+    it('recovers from transient 503 spike and formats exhausted 503 cleanly without raw JSON', async () => {
+      const mockPlan = buildFallbackPlan(DEFAULT_PROFILE, getFallbackAqiReading('New Delhi'));
+      const raw503 = JSON.stringify({
+        error: {
+          code: 503,
+          message: 'This model is currently experiencing high demand.',
+          status: 'UNAVAILABLE',
+        },
+      });
+
+      mockGenerateContent
+        .mockRejectedValueOnce(new Error(raw503))
+        .mockResolvedValueOnce({ text: JSON.stringify(mockPlan) });
+
+      const reqOk = new NextRequest('http://localhost/api/recommend', {
+        method: 'POST',
+        body: JSON.stringify(validBody),
+      });
+      const resOk = await postRecommendRoute(reqOk);
+      expect(resOk.status).toBe(200);
+
+      mockGenerateContent.mockRejectedValue(new Error(raw503));
+      const reqFail = new NextRequest('http://localhost/api/recommend', {
+        method: 'POST',
+        body: JSON.stringify(validBody),
+      });
+      const resFail = await postRecommendRoute(reqFail);
+      const dataFail = (await resFail.json()) as { error: string };
+      expect(resFail.status).toBe(503);
+      expect(dataFail.error).not.toContain('{');
+      expect(dataFail.error).toContain('temporarily busy');
+    });
   });
 
   describe('POST /api/chat', () => {

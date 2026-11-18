@@ -8,10 +8,7 @@ import { AqiHero } from '@/components/AqiHero';
 import { FeatureTrio } from '@/components/FeatureTrio';
 import { MedicalDisclaimer } from '@/components/MedicalDisclaimer';
 import { ProfileForm } from '@/components/ProfileForm';
-import {
-  RecommendationList,
-  type RecommendationFilterTab,
-} from '@/components/RecommendationList';
+import { RecommendationList, type RecommendationFilterTab } from '@/components/RecommendationList';
 import { ScenarioShowcase } from '@/components/ScenarioShowcase';
 import { SkyBackdrop } from '@/components/SkyBackdrop';
 import { useAqi } from '@/hooks/useAqi';
@@ -26,10 +23,11 @@ import type { UserProfile } from '@/types/airwise';
 const ImpactDashboard = dynamic(
   () => import('@/components/ImpactDashboard').then((m) => m.ImpactDashboard),
   {
+    ssr: false,
     loading: () => (
       <div
         aria-label="Loading impact dashboard"
-        className="h-80 rounded-2xl border border-[#E4E2D5] bg-white p-6 animate-pulse dark:border-emerald-900/40 dark:bg-[#131F1B]"
+        className="liquid-glass-card-aqua h-80 rounded-3xl p-6 animate-pulse"
       />
     ),
   }
@@ -38,26 +36,25 @@ const ImpactDashboard = dynamic(
 const CommunitySection = dynamic(
   () => import('@/components/CommunitySection').then((m) => m.CommunitySection),
   {
+    ssr: false,
     loading: () => (
       <div
         aria-label="Loading community section"
-        className="h-64 rounded-3xl border border-[#E4E2D5] bg-[#164A32] p-6 animate-pulse dark:border-emerald-900/40"
+        className="liquid-glass-band-emerald h-64 rounded-3xl p-6 animate-pulse"
       />
     ),
   }
 );
 
-const ChatPanel = dynamic(
-  () => import('@/components/ChatPanel').then((m) => m.ChatPanel),
-  {
-    loading: () => (
-      <div
-        aria-label="Loading assistant panel"
-        className="h-72 rounded-2xl border border-[#E4E2D5] bg-white p-6 animate-pulse dark:border-emerald-900/40 dark:bg-[#131F1B]"
-      />
-    ),
-  }
-);
+const ChatPanel = dynamic(() => import('@/components/ChatPanel').then((m) => m.ChatPanel), {
+  ssr: false,
+  loading: () => (
+    <div
+      aria-label="Loading assistant panel"
+      className="liquid-glass-card h-72 rounded-3xl p-6 animate-pulse"
+    />
+  ),
+});
 
 /**
  * Main interactive AirWise workspace following the alternating light-cream,
@@ -112,7 +109,7 @@ export function AirWiseApp() {
       setProfile(submittedProfile);
       const latestAqi =
         submittedProfile.city.toLowerCase() !== aqi.locationName.toLowerCase()
-          ? (await fetchByCity(submittedProfile.city)) ?? aqi
+          ? ((await fetchByCity(submittedProfile.city)) ?? aqi)
           : aqi;
       await generatePlan(submittedProfile, latestAqi);
     },
@@ -152,7 +149,7 @@ export function AirWiseApp() {
 
           {/* Two-column workspace: Household Profile + Before/After Impact Dashboard */}
           <motion.div
-            initial={{ opacity: 0.96, y: 6 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             className="grid gap-8 lg:grid-cols-12 lg:items-start"
@@ -201,12 +198,12 @@ export function AirWiseApp() {
           {/* Grounded Streaming AI Follow-up */}
           <ChatPanel profile={profile} aqi={aqi} />
 
-          {/* Soft Sky-Mint Closing Invitation Band */}
+          {/* Iridescent Liquid Glass Closing Invitation Band */}
           <section
             aria-label="Back to live air quality summary"
-            className="rounded-3xl border border-[#CBE2EC] bg-gradient-to-r from-[#E5F2F8] via-[#EBF5E6] to-[#FBF0D9] px-6 py-8 text-center dark:border-emerald-900/40 dark:from-[#132028] dark:via-[#132219] dark:to-[#1E1C15]"
+            className="liquid-glass-card-iridescent rounded-3xl px-6 py-8 text-center"
           >
-            <h2 className="text-2xl font-bold text-[#164A32] dark:text-white">
+            <h2 className="text-2xl font-bold text-[#123D2B] dark:text-white">
               Ready for Cleaner Winter Mornings?
             </h2>
             <p className="mt-1.5 mx-auto max-w-lg text-sm text-slate-700 dark:text-slate-300">
@@ -215,7 +212,7 @@ export function AirWiseApp() {
             </p>
             <a
               href="#top"
-              className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#C2410C] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#9A3412] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C2410C]"
+              className="liquid-btn-primary mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5]"
             >
               <ArrowUp className="h-4 w-4" aria-hidden="true" />
               <span>Check Another Location</span>

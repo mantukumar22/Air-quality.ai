@@ -3,20 +3,10 @@
  */
 
 export type AqiCategoryId =
-  | 'good'
-  | 'moderate'
-  | 'sensitive'
-  | 'unhealthy'
-  | 'very_unhealthy'
-  | 'hazardous';
+  'good' | 'moderate' | 'sensitive' | 'unhealthy' | 'very_unhealthy' | 'hazardous';
 
 export type AqiIconName =
-  | 'shield-check'
-  | 'wind'
-  | 'alert-triangle'
-  | 'alert-octagon'
-  | 'flame'
-  | 'siren';
+  'shield-check' | 'wind' | 'alert-triangle' | 'alert-octagon' | 'flame' | 'siren';
 
 export interface AqiCategoryMeta {
   id: AqiCategoryId;
@@ -48,15 +38,12 @@ export interface AqiReading {
 export type HouseholdGroup = 'kids' | 'elderly' | 'respiratory' | 'pets';
 
 export type CommuteMode =
-  | 'walking_cycling'
-  | 'public_transit'
-  | 'carpool'
-  | 'private_car'
-  | 'remote';
+  'walking_cycling' | 'public_transit' | 'carpool' | 'private_car' | 'remote';
 
 export type HomeType = 'apartment' | 'detached_house' | 'townhouse' | 'shared_home';
 
-export type VentilationType = 'natural_windows' | 'exhaust_fans' | 'hepa_purifier' | 'hvac_filtered';
+export type VentilationType =
+  'natural_windows' | 'exhaust_fans' | 'hepa_purifier' | 'hvac_filtered';
 
 export type HeatingSource = 'electric' | 'natural_gas' | 'wood_coal' | 'district' | 'none';
 

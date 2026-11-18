@@ -1,29 +1,10 @@
 'use client';
 
-import { OpenWingBird } from '@/components/OpenWingBird';
-
-function CumulusCluster({
-  className,
-  scaleClass = 'scale-100',
-}: {
-  className: string;
-  scaleClass?: string;
-}) {
-  return (
-    <div className={`pointer-events-none absolute ${className} ${scaleClass}`} aria-hidden="true">
-      <div className="relative h-14 w-44">
-        <div className="absolute bottom-0 left-3 h-9 w-36 rounded-full bg-white/70 blur-[1px] dark:bg-sky-200/10" />
-        <div className="absolute bottom-3 left-6 h-11 w-14 rounded-full bg-white/75 dark:bg-sky-200/12" />
-        <div className="absolute bottom-4 left-14 h-12 w-16 rounded-full bg-white/80 dark:bg-sky-200/14" />
-        <div className="absolute bottom-2 right-5 h-9 w-12 rounded-full bg-white/70 dark:bg-sky-200/10" />
-      </div>
-    </div>
-  );
-}
+import { FlyingSkyBird, MovingSkyCloud } from '@/components/SkyMotionPrimitives';
 
 /**
  * Full-page Earth sky backdrop with serene atmospheric gradient,
- * gentle cumulus clouds, and open-winged soaring birds.
+ * left-to-right drifting cumulus clouds, and flying open-winged birds.
  */
 export function SkyBackdrop() {
   return (
@@ -34,23 +15,72 @@ export function SkyBackdrop() {
       {/* Subtle solar horizon glow */}
       <div className="absolute -top-24 right-1/4 h-72 w-72 rounded-full bg-amber-100/45 blur-3xl dark:bg-sky-400/10" />
 
-      {/* Scattered calm cumulus clouds across the page sky */}
-      <CumulusCluster className="top-[14%] left-[4%] opacity-85" scaleClass="scale-110" />
-      <CumulusCluster className="top-[28%] right-[6%] opacity-75" scaleClass="scale-95" />
-      <CumulusCluster className="top-[54%] left-[8%] opacity-65" scaleClass="scale-125" />
-      <CumulusCluster className="top-[72%] right-[10%] opacity-70" scaleClass="scale-100" />
-      <CumulusCluster className="bottom-[6%] left-[24%] opacity-60" scaleClass="scale-90" />
+      {/* Left-to-right moving cumulus clouds across the full-page sky */}
+      <MovingSkyCloud
+        topClass="top-[14%]"
+        motionClass="animate-[airwise-cloud-drift_52s_linear_infinite] [animation-delay:-6s]"
+        scaleClass="scale-110"
+        opacityClass="opacity-80"
+        softBlur
+      />
+      <MovingSkyCloud
+        topClass="top-[28%]"
+        motionClass="animate-[airwise-cloud-drift_64s_linear_infinite] [animation-delay:-34s]"
+        scaleClass="scale-95"
+        opacityClass="opacity-70"
+        softBlur
+      />
+      <MovingSkyCloud
+        topClass="top-[52%]"
+        motionClass="animate-[airwise-cloud-drift_70s_linear_infinite] [animation-delay:-14s]"
+        scaleClass="scale-125"
+        opacityClass="opacity-60"
+        softBlur
+      />
+      <MovingSkyCloud
+        topClass="top-[70%]"
+        motionClass="animate-[airwise-cloud-drift_58s_linear_infinite] [animation-delay:-42s]"
+        scaleClass="scale-100"
+        opacityClass="opacity-65"
+        softBlur
+      />
+      <MovingSkyCloud
+        topClass="top-[85%]"
+        motionClass="animate-[airwise-cloud-drift_62s_linear_infinite] [animation-delay:-24s]"
+        scaleClass="scale-90"
+        opacityClass="opacity-55"
+        softBlur
+      />
 
-      {/* Distant calm open-wing soaring birds */}
-      <div className="absolute top-[22%] right-[22%] text-sky-900/35 -rotate-6 dark:text-sky-200/25">
-        <OpenWingBird size="md" animated={false} />
-      </div>
-      <div className="absolute top-[48%] left-[18%] text-sky-900/30 rotate-6 dark:text-sky-200/25">
-        <OpenWingBird size="sm" animated={false} />
-      </div>
-      <div className="absolute top-[66%] right-[28%] text-sky-900/30 -rotate-3 dark:text-sky-200/25">
-        <OpenWingBird size="md" animated={false} />
-      </div>
+      {/* Open-winged birds flying smoothly across the full-page sky */}
+      <FlyingSkyBird
+        topClass="top-[22%]"
+        motionClass="animate-[airwise-bird-glide_32s_linear_infinite] [animation-delay:-19s]"
+        flapClass="[animation-duration:1.05s]"
+        size="md"
+        colorClass="text-sky-900/40 dark:text-sky-200/35"
+      />
+      <FlyingSkyBird
+        topClass="top-[46%]"
+        motionClass="animate-[airwise-bird-glide_38s_linear_infinite] [animation-delay:-8s]"
+        flapClass="[animation-duration:0.95s]"
+        size="sm"
+        colorClass="text-sky-900/35 dark:text-sky-200/30"
+      />
+      <FlyingSkyBird
+        topClass="top-[64%]"
+        motionClass="animate-[airwise-bird-glide_34s_linear_infinite] [animation-delay:-24s]"
+        flapClass="[animation-duration:1.1s]"
+        size="md"
+        colorClass="text-sky-900/35 dark:text-sky-200/30"
+      />
+      <FlyingSkyBird
+        topClass="top-[79%]"
+        motionClass="animate-[airwise-bird-glide_30s_linear_infinite] [animation-delay:-12s]"
+        flapClass="[animation-duration:1.0s]"
+        size="sm"
+        colorClass="text-sky-900/30 dark:text-sky-200/25"
+      />
     </div>
   );
 }

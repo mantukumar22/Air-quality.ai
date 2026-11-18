@@ -54,18 +54,14 @@ describe('AirWise interactive components', () => {
     await user.click(screen.getByRole('button', { name: /Generate Tailored Action Plan/i }));
 
     expect(handleSubmit).not.toHaveBeenCalled();
-    expect(
-      screen.getByText(/Please enter a city or neighborhood name/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Please enter a city or neighborhood name/i)).toBeInTheDocument();
 
     await user.clear(cityInput);
     await user.type(cityInput, 'Lahore');
     await user.click(screen.getByRole('button', { name: /Generate Tailored Action Plan/i }));
 
     expect(handleSubmit).toHaveBeenCalledTimes(1);
-    expect(handleSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ city: 'Lahore' })
-    );
+    expect(handleSubmit).toHaveBeenCalledWith(expect.objectContaining({ city: 'Lahore' }));
   });
 
   it('filters recommendations by tab and persists checklist ticks in localStorage', async () => {

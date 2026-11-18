@@ -12,30 +12,16 @@ interface ImpactDashboardProps {
  * Displays Before-vs-After PM2.5 exposure and emission reductions using an
  * accessible SVG chart, Tailwind progress bars, text summary, and a data table fallback.
  */
-export const ImpactDashboard = memo(function ImpactDashboard({
-  metrics,
-}: ImpactDashboardProps) {
+export const ImpactDashboard = memo(function ImpactDashboard({ metrics }: ImpactDashboardProps) {
   const maxExposure = Math.max(20, metrics.baselineExposureUgM3);
   const beforeExpWidth = 100;
-  const activeExpWidth = Math.max(
-    6,
-    Math.round((metrics.activeExposureUgM3 / maxExposure) * 100)
-  );
-  const fullExpWidth = Math.max(
-    6,
-    Math.round((metrics.projectedExposureUgM3 / maxExposure) * 100)
-  );
+  const activeExpWidth = Math.max(6, Math.round((metrics.activeExposureUgM3 / maxExposure) * 100));
+  const fullExpWidth = Math.max(6, Math.round((metrics.projectedExposureUgM3 / maxExposure) * 100));
 
   const maxEmission = Math.max(20, metrics.baselineEmissionIndex);
   const beforeEmWidth = 100;
-  const activeEmWidth = Math.max(
-    6,
-    Math.round((metrics.activeEmissionIndex / maxEmission) * 100)
-  );
-  const fullEmWidth = Math.max(
-    6,
-    Math.round((metrics.projectedEmissionIndex / maxEmission) * 100)
-  );
+  const activeEmWidth = Math.max(6, Math.round((metrics.activeEmissionIndex / maxEmission) * 100));
+  const fullEmWidth = Math.max(6, Math.round((metrics.projectedEmissionIndex / maxEmission) * 100));
 
   const svgDescription = `Estimated impact comparison: Following the full plan lowers daily personal PM2.5 exposure from ${metrics.baselineExposureUgM3} to ${metrics.projectedExposureUgM3} micrograms per cubic meter (a ${metrics.exposureReductionPct}% reduction) and lowers household winter emissions index from ${metrics.baselineEmissionIndex} to ${metrics.projectedEmissionIndex} (a ${metrics.emissionReductionPct}% reduction).`;
 
@@ -43,25 +29,29 @@ export const ImpactDashboard = memo(function ImpactDashboard({
     <section
       id="impact"
       aria-labelledby="impact-heading"
-      className="rounded-2xl border border-[#E2E4DA] bg-white p-5 sm:p-6 dark:border-emerald-900/40 dark:bg-[#131F1B]"
+      className="liquid-glass-card-aqua rounded-3xl p-5 sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-2.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EFECE3] text-[#1E4D3B] dark:bg-[#192822] dark:text-emerald-300">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/85 text-[#0E7C8D] shadow-xs dark:border-white/20 dark:bg-white/10 dark:text-teal-300">
             <BarChart3 className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 id="impact-heading" className="text-lg font-bold text-[#1E4D3B] dark:text-white">
+            <h2 id="impact-heading" className="text-lg font-bold text-[#123D2B] dark:text-white">
               Estimated Household Impact
             </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Before vs. after exposure and emissions · Estimate based on profile &amp; checked habits
+            <p className="text-xs text-slate-700 dark:text-slate-300">
+              Before vs. after exposure and emissions · Estimate based on profile &amp; checked
+              habits
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-sm font-medium text-[#1E4D3B] dark:text-emerald-200">
-          <CheckCircle2 className="h-4 w-4 text-[#C9482B] dark:text-[#FF8A6B]" aria-hidden="true" />
+        <div className="flex items-center gap-2 text-sm font-medium text-[#123D2B] dark:text-emerald-200">
+          <CheckCircle2
+            className="h-4 w-4 text-[#5846E5] dark:text-indigo-300"
+            aria-hidden="true"
+          />
           <span className="font-mono tabular-nums">
             {metrics.completedActionsCount}/{metrics.totalActionsCount} actions checked
           </span>
@@ -69,7 +59,7 @@ export const ImpactDashboard = memo(function ImpactDashboard({
       </div>
 
       {/* Headline savings summary */}
-      <div className="mt-5 grid grid-cols-1 gap-4 border-y border-[#E2E4DA] py-4 sm:grid-cols-2 dark:border-emerald-900/40">
+      <div className="mt-5 grid grid-cols-1 gap-4 border-y border-white/70 py-4 sm:grid-cols-2 dark:border-white/15">
         <div>
           <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
             Estimated PM2.5 Exposure Reduction (Full Plan)
@@ -293,7 +283,10 @@ export const ImpactDashboard = memo(function ImpactDashboard({
               </td>
             </tr>
             <tr>
-              <th scope="row" className="py-2 pr-3 font-medium text-[#1E4D3B] dark:text-emerald-300">
+              <th
+                scope="row"
+                className="py-2 pr-3 font-medium text-[#1E4D3B] dark:text-emerald-300"
+              >
                 Full plan adopted
               </th>
               <td className="py-2 px-3 text-right font-mono font-semibold text-[#1E4D3B] dark:text-emerald-300 tabular-nums">

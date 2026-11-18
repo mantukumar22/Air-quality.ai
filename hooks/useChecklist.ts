@@ -68,9 +68,7 @@ export function useChecklist(): UseChecklistResult {
 
   const toggleItem = useCallback((id: string) => {
     const current = parseChecklistJson(getChecklistSnapshot());
-    const next = current.includes(id)
-      ? current.filter((item) => item !== id)
-      : [...current, id];
+    const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
     writeChecklist(next);
   }, []);
 

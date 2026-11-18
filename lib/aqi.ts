@@ -87,11 +87,17 @@ export function getFallbackAqiReading(cityName = 'Your Area'): AqiReading {
     pm25: FALLBACK_AQI_VALUES.pm25,
     pm10: FALLBACK_AQI_VALUES.pm10,
     no2: FALLBACK_AQI_VALUES.no2,
-    observedAt: new Date().toISOString(),
+    observedAt: FALLBACK_AQI_VALUES.observedAt,
     category: getAqiCategory(FALLBACK_AQI_VALUES.usAqi),
     isFallback: true,
     source: 'Cached Winter Smog Baseline',
   };
+}
+
+function getTimeoutSignal(): AbortSignal | undefined {
+  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(8000)
+    : undefined;
 }
 
 /**
@@ -106,6 +112,7 @@ export async function geocodeCity(
   const response = await fetch(url, {
     next: { revalidate: AQI_REVALIDATE_SECONDS },
     headers: { Accept: 'application/json' },
+    signal: getTimeoutSignal(),
   });
 
   if (!response.ok) {
@@ -115,11 +122,7 @@ export async function geocodeCity(
   const data = (await response.json()) as OpenMeteoGeoResult;
   const first = data.results?.[0];
 
-  if (
-    !first ||
-    typeof first.latitude !== 'number' ||
-    typeof first.longitude !== 'number'
-  ) {
+  if (!first || typeof first.latitude !== 'number' || typeof first.longitude !== 'number') {
     throw new Error(`Location "${cleanCity}" was not found. Try a nearby major city.`);
   }
 
@@ -161,6 +164,7 @@ export async function fetchOpenMeteoAqi(params: {
   const response = await fetch(airUrl, {
     next: { revalidate: AQI_REVALIDATE_SECONDS },
     headers: { Accept: 'application/json' },
+    signal: getTimeoutSignal(),
   });
 
   if (!response.ok) {
@@ -177,14 +181,10 @@ export async function fetchOpenMeteoAqi(params: {
   const pm25 = typeof current.pm2_5 === 'number' ? Number(current.pm2_5.toFixed(1)) : 0;
   const pm10 = typeof current.pm10 === 'number' ? Number(current.pm10.toFixed(1)) : 0;
   const no2 =
-    typeof current.nitrogen_dioxide === 'number'
-      ? Number(current.nitrogen_dioxide.toFixed(1))
-      : 0;
+    typeof current.nitrogen_dioxide === 'number' ? Number(current.nitrogen_dioxide.toFixed(1)) : 0;
 
   const rawAqi =
-    typeof current.us_aqi === 'number'
-      ? Math.round(current.us_aqi)
-      : calculateUsAqiFromPm25(pm25);
+    typeof current.us_aqi === 'number' ? Math.round(current.us_aqi) : calculateUsAqiFromPm25(pm25);
 
   return {
     locationName,

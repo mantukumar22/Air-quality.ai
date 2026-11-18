@@ -1,12 +1,9 @@
 'use client';
 
-import { motion } from 'motion/react';
-
 interface OpenWingBirdProps {
   size?: 'sm' | 'md' | 'lg';
   animated?: boolean;
-  flapDuration?: number;
-  flapDelay?: number;
+  flapClass?: string;
   className?: string;
 }
 
@@ -32,13 +29,12 @@ const SIZE_CLASSES: Record<
 };
 
 /**
- * Pure-CSS open-winged flying bird silhouette with optional smooth wing-flapping animation.
+ * Pure-CSS open-winged flying bird silhouette with hydration-safe wing-flapping keyframes.
  */
 export function OpenWingBird({
   size = 'md',
   animated = true,
-  flapDuration = 1.1,
-  flapDelay = 0,
+  flapClass = '',
   className = '',
 }: OpenWingBirdProps) {
   const dims = SIZE_CLASSES[size];
@@ -65,26 +61,12 @@ export function OpenWingBird({
       aria-hidden="true"
       className={`relative inline-flex items-center justify-center ${dims.wrapper} ${className}`}
     >
-      <motion.span
-        className={`absolute left-0 top-0.5 rounded-tl-full rounded-tr-md border-current origin-right ${dims.wing}`}
-        animate={{ rotate: [-22, 16, -22] }}
-        transition={{
-          duration: flapDuration,
-          delay: flapDelay,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
+      <span
+        className={`absolute left-0 top-0.5 rounded-tl-full rounded-tr-md border-current origin-right animate-[airwise-wing-left_1s_ease-in-out_infinite] ${flapClass} ${dims.wing}`}
       />
       <span className={`rounded-full bg-current ${dims.body}`} />
-      <motion.span
-        className={`absolute right-0 top-0.5 rounded-tr-full rounded-tl-md border-current origin-left ${dims.wing}`}
-        animate={{ rotate: [22, -16, 22] }}
-        transition={{
-          duration: flapDuration,
-          delay: flapDelay,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
+      <span
+        className={`absolute right-0 top-0.5 rounded-tr-full rounded-tl-md border-current origin-left animate-[airwise-wing-right_1s_ease-in-out_infinite] ${flapClass} ${dims.wing}`}
       />
     </div>
   );

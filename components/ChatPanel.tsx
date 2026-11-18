@@ -72,9 +72,7 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
 
       if (!response.ok || !response.body) {
         const errPayload = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(
-          errPayload.error || 'Unable to stream response from AirWise assistant.'
-        );
+        throw new Error(errPayload.error || 'Unable to stream response from AirWise assistant.');
       }
 
       const reader = response.body.getReader();
@@ -90,6 +88,19 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, content: snapshot } : m))
         );
+      }
+
+      const tail = decoder.decode();
+      if (tail) {
+        buffer += tail;
+        const finalText = buffer;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, content: finalText } : m))
+        );
+      }
+
+      if (!buffer.trim()) {
+        throw new Error('Assistant returned an empty response. Please try again.');
       }
     } catch (err) {
       const message =
@@ -120,27 +131,24 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
     <section
       id="assistant"
       aria-labelledby="assistant-heading"
-      className="rounded-2xl border border-[#E2E4DA] bg-white p-5 sm:p-6 dark:border-emerald-900/40 dark:bg-[#131F1B]"
+      className="liquid-glass-card rounded-3xl p-5 sm:p-6"
     >
-      <div className="flex items-start gap-2.5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EFECE3] text-[#1E4D3B] dark:bg-[#192822] dark:text-emerald-300">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/85 text-[#5846E5] shadow-xs dark:border-white/20 dark:bg-white/10 dark:text-indigo-300">
           <MessageSquare className="h-5 w-5" aria-hidden="true" />
         </div>
         <div>
-          <h2
-            id="assistant-heading"
-            className="text-lg font-bold text-[#1E4D3B] dark:text-white"
-          >
+          <h2 id="assistant-heading" className="text-lg font-bold text-[#123D2B] dark:text-white">
             Follow-Up Questions
           </h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-slate-700 dark:text-slate-300">
             Grounded in {aqi.locationName} ({aqi.usAqi} AQI · PM2.5 {aqi.pm25} µg/m³) and your{' '}
             {profile.budget}-budget household profile.
           </p>
         </div>
       </div>
 
-      {/* Starter question buttons */}
+      {/* Starter question pills */}
       <div className="mt-4 flex flex-wrap gap-2">
         {STARTER_PROMPTS.map((prompt) => (
           <button
@@ -148,7 +156,7 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
             type="button"
             disabled={isStreaming}
             onClick={() => void sendMessage(prompt)}
-            className="min-h-[44px] rounded-xl border border-[#E2E4DA] bg-[#FAF9F5] px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-[#EFECE3] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] dark:border-emerald-900/40 dark:bg-[#0D1512] dark:text-slate-300 dark:hover:bg-[#192822]"
+            className="liquid-btn-glass min-h-[44px] rounded-full px-4 py-2 text-left text-xs font-medium text-slate-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
           >
             {prompt}
           </button>
@@ -159,10 +167,10 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
       <div
         aria-live="polite"
         aria-label="Assistant conversation"
-        className="mt-5 max-h-96 space-y-4 overflow-y-auto border-y border-[#E2E4DA] py-4 dark:border-emerald-900/40"
+        className="mt-5 max-h-96 space-y-4 overflow-y-auto border-y border-white/70 py-4 dark:border-white/15"
       >
         {messages.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Ask a follow-up question about ventilation timing, DIY filters, school commutes, or
             reducing household smoke.
           </p>
@@ -172,14 +180,14 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
               key={msg.id}
               className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
             >
-              <span className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">
                 {msg.role === 'user' ? 'You' : 'AirWise Assistant'}
               </span>
               <div
-                className={`max-w-[90%] sm:max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                className={`max-w-[90%] sm:max-w-[80%] rounded-3xl px-4 py-3 text-sm leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-[#1E4D3B] text-white dark:bg-emerald-700'
-                    : 'border border-[#E2E4DA] bg-[#FAF9F5] text-slate-800 dark:border-emerald-900/40 dark:bg-[#0D1512] dark:text-slate-200'
+                    ? 'liquid-btn-primary'
+                    : 'liquid-glass-card text-slate-900 dark:text-slate-100'
                 }`}
               >
                 {msg.content ? (
@@ -189,7 +197,7 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
                     </p>
                   ))
                 ) : (
-                  <span className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                     Thinking...
                   </span>
@@ -201,7 +209,7 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+        <p role="alert" className="mt-3 text-xs text-amber-800 dark:text-amber-300">
           {error}
         </p>
       )}
@@ -221,13 +229,13 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
             maxLength={INPUT_LIMITS.chatMessageMaxLength}
             onChange={(e) => setInput(e.target.value)}
             placeholder="e.g., Is it safe to open bedroom windows at 2 PM?"
-            className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#D4D8CB] bg-[#FAF9F5] px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4D3B] dark:border-emerald-900/50 dark:bg-[#0D1512] dark:text-slate-100"
+            className="liquid-input mt-1.5 min-h-[44px] w-full rounded-full px-4 text-sm text-slate-900 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100 dark:placeholder:text-slate-400"
           />
         </div>
         <button
           type="submit"
           disabled={isStreaming || input.trim().length === 0}
-          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#C9482B] px-5 py-2 text-sm font-semibold text-white hover:bg-[#B23C22] disabled:opacity-50 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C9482B] dark:bg-[#D95B3D] dark:hover:bg-[#C9482B]"
+          className="liquid-btn-primary inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-6 py-2 text-sm font-semibold disabled:opacity-50 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5]"
         >
           {isStreaming ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

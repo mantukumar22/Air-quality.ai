@@ -1,8 +1,4 @@
-import {
-  calculateUsAqiFromPm25,
-  getAqiCategory,
-  getFallbackAqiReading,
-} from '@/lib/aqi';
+import { calculateUsAqiFromPm25, getAqiCategory, getFallbackAqiReading } from '@/lib/aqi';
 
 describe('AQI category mapping and calculations', () => {
   it('maps US AQI ranges to expected categories with accessible labels and icons', () => {

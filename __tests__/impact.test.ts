@@ -15,10 +15,7 @@ describe('Impact calculation engine', () => {
       { ...DEFAULT_PROFILE, cookingFuel: 'biomass_solid' },
       aqi
     );
-    const induction = computeBaselineMetrics(
-      { ...DEFAULT_PROFILE, cookingFuel: 'induction' },
-      aqi
-    );
+    const induction = computeBaselineMetrics({ ...DEFAULT_PROFILE, cookingFuel: 'induction' }, aqi);
 
     expect(biomass.baselineExposureUgM3).toBeGreaterThan(induction.baselineExposureUgM3);
     expect(biomass.baselineEmissionIndex).toBeGreaterThan(induction.baselineEmissionIndex);

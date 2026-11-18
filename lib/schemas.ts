@@ -15,8 +15,7 @@ export const aqiQuerySchema = z
     lon: z.coerce.number().min(-180).max(180).optional(),
   })
   .refine(
-    (data) =>
-      Boolean(data.city) || (typeof data.lat === 'number' && typeof data.lon === 'number'),
+    (data) => Boolean(data.city) || (typeof data.lat === 'number' && typeof data.lon === 'number'),
     {
       message: 'Provide either a city name or valid latitude and longitude coordinates.',
     }

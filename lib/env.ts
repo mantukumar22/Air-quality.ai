@@ -3,7 +3,7 @@ import { z } from 'zod';
 const serverEnvSchema = z.object({
   GEMINI_API_KEY: z.string().trim().min(1).optional(),
   APP_URL: z.string().trim().optional(),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.string().trim().default('development'),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -26,7 +26,9 @@ export function getServerEnv(): ServerEnv {
   });
 
   if (!parsed.success) {
-    throw new Error(`Invalid server environment configuration: ${parsed.error.issues[0]?.message ?? 'unknown error'}`);
+    throw new Error(
+      `Invalid server environment configuration: ${parsed.error.issues[0]?.message ?? 'unknown error'}`
+    );
   }
 
   cachedEnv = parsed.data;

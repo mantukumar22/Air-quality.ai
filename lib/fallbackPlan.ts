@@ -283,7 +283,7 @@ export function buildFallbackPlan(profile: UserProfile, aqi: AqiReading): Recomm
     ],
     neighborShareSummary: `AirWise Alert for ${cityLabel}: Current air quality is ${aqi.category.label} (${aqi.usAqi} AQI, PM2.5 ${aqi.pm25} µg/m³). Today's winter-smog tips: keep windows closed during morning/evening inversions, run indoor filtration or damp-mop dust, avoid burning leaves/trash, and check on elderly or asthmatic neighbors.`,
     disclaimer: MEDICAL_DISCLAIMER,
-    generatedAt: new Date().toISOString(),
+    generatedAt: aqi.observedAt || '2026-01-15T08:00:00.000Z',
     isFallback: true,
   };
 }

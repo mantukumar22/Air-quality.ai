@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { streamGroundedChat } from '@/lib/gemini';
+import { formatGeminiApiError, streamGroundedChat } from '@/lib/gemini';
 import { chatRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { chatRequestSchema } from '@/lib/schemas';
 
@@ -53,11 +53,8 @@ export async function POST(request: NextRequest) {
           }
           controller.close();
         } catch (streamErr) {
-          const errMessage =
-            streamErr instanceof Error
-              ? streamErr.message
-              : 'Stream interrupted while generating response.';
-          controller.error(new Error(errMessage));
+          const formatted = formatGeminiApiError(streamErr);
+          controller.error(new Error(formatted.message));
         }
       },
     });
@@ -71,12 +68,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Unable to connect to AI assistant right now.';
-    const isConfigError = message.includes('GEMINI_API_KEY');
-    return NextResponse.json(
-      { error: message },
-      { status: isConfigError ? 503 : 502 }
-    );
+    const formatted = formatGeminiApiError(err);
+    return NextResponse.json({ error: formatted.message }, { status: formatted.statusCode });
   }
 }

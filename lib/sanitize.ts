@@ -21,7 +21,10 @@ export function stripControlChars(input: string, allowNewlines = false): string 
 export function sanitizeText(input: string, maxLength: number, allowNewlines = false): string {
   const withoutControls = stripControlChars(input, allowNewlines);
   const collapsed = allowNewlines
-    ? withoutControls.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+    ? withoutControls
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
     : withoutControls.replace(/\s+/g, ' ').trim();
 
   if (collapsed.length <= maxLength) {
@@ -36,9 +39,7 @@ export function sanitizeText(input: string, maxLength: number, allowNewlines = f
  */
 export function sanitizeForPrompt(input: string, maxLength: number): string {
   const cleaned = sanitizeText(input, maxLength, false);
-  return cleaned
-    .replace(/<\/?[a-zA-Z0-9_-]+>/g, '')
-    .replace(/[<>`]/g, '');
+  return cleaned.replace(/<\/?[a-zA-Z0-9_-]+>/g, '').replace(/[<>`]/g, '');
 }
 
 /**

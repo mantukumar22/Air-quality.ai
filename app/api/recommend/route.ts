@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateTailoredRecommendations } from '@/lib/gemini';
+import { formatGeminiApiError, generateTailoredRecommendations } from '@/lib/gemini';
 import { getClientIp, recommendRateLimiter } from '@/lib/rateLimit';
 import { recommendRequestSchema } from '@/lib/schemas';
 
@@ -42,14 +42,7 @@ export async function POST(request: NextRequest) {
     const plan = await generateTailoredRecommendations(parsed.data.profile, parsed.data.aqi);
     return NextResponse.json({ plan }, { status: 200 });
   } catch (err) {
-    const message =
-      err instanceof Error
-        ? err.message
-        : 'AI recommendation service is currently unavailable.';
-    const isConfigError = message.includes('GEMINI_API_KEY');
-    return NextResponse.json(
-      { error: message },
-      { status: isConfigError ? 503 : 502 }
-    );
+    const formatted = formatGeminiApiError(err);
+    return NextResponse.json({ error: formatted.message }, { status: formatted.statusCode });
   }
 }

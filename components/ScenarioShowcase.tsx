@@ -83,7 +83,7 @@ export function ScenarioShowcase({ onSelectCategory }: ScenarioShowcaseProps) {
     <section
       id="scenarios"
       aria-labelledby="scenarios-heading"
-      className="rounded-3xl bg-[#164A32] px-4 py-8 text-white sm:px-8 sm:py-10 dark:bg-[#0F3323]"
+      className="liquid-glass-band-emerald rounded-3xl px-4 py-8 text-white sm:px-8 sm:py-10"
     >
       <div className="text-center">
         <h2 id="scenarios-heading" className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -99,7 +99,7 @@ export function ScenarioShowcase({ onSelectCategory }: ScenarioShowcaseProps) {
           type="button"
           onClick={() => handleStep(-1)}
           aria-label="Highlight previous playbook"
-          className="hidden sm:inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-[#164A32] hover:bg-emerald-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="liquid-btn-glass hidden sm:inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#123D2B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white dark:text-white"
         >
           <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </button>
@@ -110,11 +110,13 @@ export function ScenarioShowcase({ onSelectCategory }: ScenarioShowcaseProps) {
             return (
               <article
                 key={card.id}
-                className={`flex flex-col overflow-hidden rounded-2xl bg-white text-slate-900 transition-transform duration-150 ${
-                  isSpotlight ? 'ring-2 ring-[#FF8A4C] -translate-y-0.5' : 'opacity-95 hover:opacity-100'
-                } dark:bg-[#131F1B] dark:text-white`}
+                className={`liquid-glass-card flex flex-col overflow-hidden rounded-3xl p-2 text-slate-900 transition-transform duration-150 dark:text-white ${
+                  isSpotlight
+                    ? 'ring-2 ring-white/90 -translate-y-0.5'
+                    : 'opacity-95 hover:opacity-100'
+                }`}
               >
-                <div className="aspect-[4/3] w-full overflow-hidden bg-[#EFECE3] dark:bg-[#192822]">
+                <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#EFECE3] dark:bg-[#192822]">
                   <SmartImage
                     src={card.image}
                     alt={card.alt}
@@ -123,12 +125,12 @@ export function ScenarioShowcase({ onSelectCategory }: ScenarioShowcaseProps) {
                   />
                 </div>
 
-                <div className="flex flex-1 flex-col justify-between p-4">
+                <div className="flex flex-1 flex-col justify-between p-3">
                   <div>
-                    <h3 className="text-sm font-bold text-[#164A32] dark:text-white">
+                    <h3 className="text-sm font-bold text-[#123D2B] dark:text-white">
                       {card.title}
                     </h3>
-                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                    <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">
                       <span>{card.windowLabel}</span>
                       <span aria-hidden="true"> · </span>
                       <span className="font-mono font-semibold text-[#C2410C] dark:text-[#FF8A4C] tabular-nums">
@@ -143,7 +145,7 @@ export function ScenarioShowcase({ onSelectCategory }: ScenarioShowcaseProps) {
                       setSpotlightIndex(idx);
                       handleCardSelect(card.tab);
                     }}
-                    className="mt-3 inline-flex min-h-[40px] w-full items-center justify-between rounded-xl bg-[#EBF5E6] px-3 py-1.5 text-xs font-semibold text-[#164A32] hover:bg-[#DCECD4] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164A32] dark:bg-[#192822] dark:text-emerald-200 dark:hover:bg-[#22362E]"
+                    className="liquid-btn-glass mt-3 inline-flex min-h-[40px] w-full items-center justify-between rounded-full px-3.5 py-1.5 text-xs font-semibold text-[#123D2B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-white"
                   >
                     <span className="inline-flex items-center gap-1.5">
                       <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
@@ -161,7 +163,7 @@ export function ScenarioShowcase({ onSelectCategory }: ScenarioShowcaseProps) {
           type="button"
           onClick={() => handleStep(1)}
           aria-label="Highlight next playbook"
-          className="hidden sm:inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-[#164A32] hover:bg-emerald-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="liquid-btn-glass hidden sm:inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#123D2B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white dark:text-white"
         >
           <ChevronRight className="h-5 w-5" aria-hidden="true" />
         </button>

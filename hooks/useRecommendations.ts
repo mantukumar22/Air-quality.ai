@@ -96,7 +96,7 @@ export function useRecommendations(
           }),
         });
 
-        const data = (await response.json()) as {
+        const data = (await response.json().catch(() => ({}))) as {
           plan?: RecommendationPlan;
           error?: string;
         };
@@ -115,9 +115,7 @@ export function useRecommendations(
         return data.plan;
       } catch (err) {
         const message =
-          err instanceof Error
-            ? err.message
-            : 'Unable to reach AI recommendations right now.';
+          err instanceof Error ? err.message : 'Unable to reach AI recommendations right now.';
         setError(
           `${message} Showing tailored offline winter-smog guidance so your household still has an actionable plan.`
         );

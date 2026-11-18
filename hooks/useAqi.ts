@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getFallbackAqiReading } from '@/lib/aqi';
 import { DEFAULT_PROFILE, STORAGE_KEYS } from '@/lib/constants';
 import type { AqiReading } from '@/types/airwise';
@@ -41,6 +41,7 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchByCity = useCallback(async (city: string): Promise<AqiReading | null> => {
     const trimmed = city.trim();
@@ -49,12 +50,18 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
       return null;
     }
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/aqi?city=${encodeURIComponent(trimmed)}`);
-      const data = (await res.json()) as { aqi?: AqiReading; error?: string };
+      const res = await fetch(`/api/aqi?city=${encodeURIComponent(trimmed)}`, {
+        signal: controller.signal,
+      });
+      const data = (await res.json().catch(() => ({}))) as { aqi?: AqiReading; error?: string };
 
       if (!res.ok || !data.aqi) {
         throw new Error(data.error || 'Could not load live air quality for that location.');
@@ -64,6 +71,9 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
       persistCachedAqi(data.aqi);
       return data.aqi;
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return null;
+      }
       const message =
         err instanceof Error
           ? err.message
@@ -75,7 +85,9 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
       setAqi(fallback);
       return fallback;
     } finally {
-      setIsLoading(false);
+      if (abortRef.current === controller) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -84,6 +96,10 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
       setError('Browser geolocation is not supported in this environment.');
       return null;
     }
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setIsLocating(true);
     setError(null);
@@ -103,9 +119,10 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
       const res = await fetch(
         `/api/aqi?lat=${encodeURIComponent(latitude.toFixed(4))}&lon=${encodeURIComponent(
           longitude.toFixed(4)
-        )}`
+        )}`,
+        { signal: controller.signal }
       );
-      const data = (await res.json()) as { aqi?: AqiReading; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { aqi?: AqiReading; error?: string };
 
       if (!res.ok || !data.aqi) {
         throw new Error(data.error || 'Unable to load air quality for your coordinates.');
@@ -115,38 +132,47 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
       persistCachedAqi(data.aqi);
       return data.aqi;
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return null;
+      }
       const geoMessage =
         err instanceof Error ? err.message : 'Location permission was declined or timed out.';
       setError(`${geoMessage} You can enter your city manually below.`);
       return null;
     } finally {
       setIsLocating(false);
-      setIsLoading(false);
+      if (abortRef.current === controller) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
     const trimmed = initialCity.trim();
     if (trimmed.length < 2) return;
 
-    fetch(`/api/aqi?city=${encodeURIComponent(trimmed)}`)
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    fetch(`/api/aqi?city=${encodeURIComponent(trimmed)}`, { signal: controller.signal })
       .then(async (res) => {
-        const data = (await res.json()) as { aqi?: AqiReading; error?: string };
+        const data = (await res.json().catch(() => ({}))) as { aqi?: AqiReading; error?: string };
         if (!res.ok || !data.aqi) {
           throw new Error(data.error || 'Could not load live air quality.');
         }
         return data.aqi;
       })
       .then((reading) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setAqi(reading);
         persistCachedAqi(reading);
         setError(null);
         setIsLoading(false);
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
+        if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+          return;
+        }
         const message =
           err instanceof Error
             ? err.message
@@ -158,7 +184,7 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [initialCity]);
 

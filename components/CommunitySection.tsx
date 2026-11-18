@@ -43,12 +43,14 @@ export function CommunitySection({
     <section
       id="community"
       aria-labelledby="community-heading"
-      className="rounded-3xl bg-[#164A32] px-5 py-8 text-white sm:px-8 sm:py-10 dark:bg-[#0F3323]"
+      className="liquid-glass-band-emerald rounded-3xl px-5 py-8 text-white sm:px-8 sm:py-10"
     >
       <div className="text-center">
         <div className="inline-flex items-center justify-center gap-2 text-emerald-200">
           <Users className="h-5 w-5" aria-hidden="true" />
-          <span className="text-xs font-semibold tracking-wide">Family &amp; Neighborhood Mode</span>
+          <span className="text-xs font-semibold tracking-wide">
+            Family &amp; Neighborhood Mode
+          </span>
         </div>
         <h2 id="community-heading" className="mt-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
           Clean Air Starts on Your Block
@@ -67,7 +69,7 @@ export function CommunitySection({
             return (
               <div
                 key={item.id}
-                className="flex items-start gap-3 rounded-2xl bg-[#EFF6EC] p-4 text-slate-900 dark:bg-[#131F1B] dark:text-slate-100"
+                className="liquid-glass-card flex items-start gap-3 rounded-3xl p-4 text-slate-900 dark:text-slate-100"
               >
                 <button
                   type="button"
@@ -75,7 +77,7 @@ export function CommunitySection({
                   aria-checked={checked}
                   aria-label={`Mark "${item.title}" as ${checked ? 'incomplete' : 'complete'}`}
                   onClick={() => onToggleItem(item.id)}
-                  className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#164A32] hover:bg-white/80 dark:text-emerald-300 dark:hover:bg-[#192822] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164A32]"
+                  className="liquid-btn-glass mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[#5846E5] dark:text-indigo-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5]"
                 >
                   {checked ? (
                     <CheckSquare className="h-5 w-5" aria-hidden="true" />
@@ -92,7 +94,7 @@ export function CommunitySection({
                       className={`text-sm font-bold ${
                         checked
                           ? 'line-through text-slate-500 dark:text-slate-400'
-                          : 'text-[#164A32] dark:text-white'
+                          : 'text-[#123D2B] dark:text-white'
                       }`}
                     >
                       {item.title}
@@ -114,13 +116,13 @@ export function CommunitySection({
         </div>
 
         {/* Shareable Neighbor Summary Card */}
-        <div className="lg:col-span-5 flex flex-col justify-between rounded-2xl bg-[#EFF6EC] p-5 text-slate-900 dark:bg-[#131F1B] dark:text-slate-100">
+        <div className="liquid-glass-card-iridescent lg:col-span-5 flex flex-col justify-between rounded-3xl p-5 text-slate-900 dark:text-slate-100">
           <div>
-            <div className="flex items-center gap-2 text-sm font-bold text-[#164A32] dark:text-white">
-              <Share2 className="h-4 w-4 text-[#C2410C] dark:text-[#FF8A4C]" aria-hidden="true" />
+            <div className="flex items-center gap-2 text-sm font-bold text-[#123D2B] dark:text-white">
+              <Share2 className="h-4 w-4 text-[#5846E5] dark:text-indigo-300" aria-hidden="true" />
               <h3>Shareable Neighbor Summary</h3>
             </div>
-            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+            <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">
               Ready to paste into building WhatsApp, SMS, or parent groups.
             </p>
 
@@ -132,7 +134,7 @@ export function CommunitySection({
               readOnly
               rows={5}
               value={neighborShareSummary}
-              className="mt-3 w-full rounded-xl border border-[#D4E2CE] bg-white p-3 text-xs leading-relaxed text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164A32] dark:border-emerald-900/40 dark:bg-[#0B1410] dark:text-slate-200"
+              className="liquid-input mt-3 w-full rounded-2xl p-3 text-xs leading-relaxed text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-200"
             />
           </div>
 
@@ -140,7 +142,7 @@ export function CommunitySection({
             <button
               type="button"
               onClick={handleCopySummary}
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-[#C2410C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#9A3412] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C2410C]"
+              className="liquid-btn-coral inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C2410C]"
             >
               {copied ? (
                 <>
@@ -154,9 +156,9 @@ export function CommunitySection({
                 </>
               )}
             </button>
-            <div aria-live="polite" className="text-xs text-slate-700 dark:text-slate-300">
+            <div aria-live="polite" className="text-xs text-slate-800 dark:text-slate-200">
               {copied && <span>Summary copied. Share it with neighbors or family members.</span>}
-              {copyError && <span className="text-amber-800 dark:text-amber-300">{copyError}</span>}
+              {copyError && <span className="text-amber-900 dark:text-amber-300">{copyError}</span>}
             </div>
           </div>
         </div>
