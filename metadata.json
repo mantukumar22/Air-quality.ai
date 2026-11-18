@@ -1,0 +1,6 @@
+{
+  "name": "AirWise: Urban Air Quality Assistant",
+  "description": "GenAI-powered urban air quality and winter smog assistant helping families reduce PM2.5 exposure with live AQI, tailored action plans, and impact tracking.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
