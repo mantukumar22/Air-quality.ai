@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
   },
   output: 'standalone',
   transpilePackages: ['motion'],
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'motion', 'zod'],
+  },
   async headers() {
     const cspDirectives = [
       "default-src 'self'",
@@ -64,6 +67,10 @@ const nextConfig: NextConfig = {
     ];
   },
   webpack: (config, { dev }) => {
+    config.output = {
+      ...config.output,
+      chunkLoadTimeout: 180_000,
+    };
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
     // Do not modify—file watching is disabled to prevent flickering during agent edits.
     if (dev && process.env.DISABLE_HMR === 'true') {

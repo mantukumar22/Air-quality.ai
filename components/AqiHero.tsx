@@ -215,35 +215,50 @@ export function AqiHero({
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
 
-              <button
-                type="button"
-                onClick={onUseGeolocation}
-                disabled={isLocating || isLoading}
-                className="liquid-btn-glass inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-[#123D2B] disabled:opacity-60 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-sky-100"
-              >
-                {isLocating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  <Navigation
-                    className="h-4 w-4 text-[#5846E5] dark:text-sky-300"
-                    aria-hidden="true"
-                  />
-                )}
-                <span>Use My Location</span>
-              </button>
+              {hasMounted ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={onUseGeolocation}
+                    disabled={isLocating || isLoading}
+                    className="liquid-btn-glass inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-[#123D2B] disabled:opacity-60 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-sky-100"
+                  >
+                    {isLocating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Navigation
+                        className="h-4 w-4 text-[#5846E5] dark:text-sky-300"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span>Use My Location</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="liquid-btn-glass inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-[#123D2B] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-sky-100"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <Moon className="h-4 w-4" aria-hidden="true" />
-                )}
-              </button>
+                  <button
+                    type="button"
+                    onClick={onToggleTheme}
+                    aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                    className="liquid-btn-glass inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-[#123D2B] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-sky-100"
+                  >
+                    {theme === 'dark' ? (
+                      <Sun className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Moon className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="liquid-btn-glass inline-flex min-h-[44px] w-40 rounded-full opacity-80"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="liquid-btn-glass inline-flex min-h-[44px] min-w-[44px] rounded-full opacity-80"
+                  />
+                </>
+              )}
             </div>
           </div>
 
@@ -276,6 +291,24 @@ export function AqiHero({
           <div className="mt-5 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-6">
             {ACTION_TILES.map((tile) => {
               const Icon = tile.icon;
+              if (!hasMounted) {
+                return (
+                  <div
+                    key={tile.id}
+                    className={`liquid-tile flex min-h-[152px] flex-col items-center justify-between rounded-3xl p-4 text-center text-white ${tile.bgClass}`}
+                  >
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/50 bg-white/22 shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)]">
+                      <Icon className="h-6 w-6 text-white" aria-hidden="true" />
+                    </span>
+                    <span className="mt-3 block">
+                      <span className="block text-sm font-bold leading-tight">{tile.title}</span>
+                      <span className="mt-1 block text-xs leading-snug text-white/95">
+                        {tile.subtitle}
+                      </span>
+                    </span>
+                  </div>
+                );
+              }
               return (
                 <button
                   key={tile.id}
@@ -300,64 +333,72 @@ export function AqiHero({
 
         {/* Live AQI Search & 4-Metric Telemetry Bar */}
         <div id="live-aqi-bar" className="mt-10 space-y-4">
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            className="liquid-glass-card-aqua rounded-3xl p-3"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <label htmlFor="hero-city-search" className="sr-only">
-                  Check live air quality by city
-                </label>
-                <MapPin
-                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0E7C8D] dark:text-sky-300"
-                  aria-hidden="true"
-                />
-                <input
-                  id="hero-city-search"
-                  type="text"
-                  value={cityQuery}
-                  onChange={(e) => {
-                    setCityQuery(e.target.value);
-                    if (inputError) setInputError(null);
-                  }}
-                  placeholder="Check live AQI for any city (e.g., New Delhi, Lahore, Beijing, Salt Lake City)"
-                  aria-describedby={inputError ? 'hero-city-error' : undefined}
-                  aria-invalid={Boolean(inputError)}
-                  className="liquid-input min-h-[46px] w-full rounded-full pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100 dark:placeholder:text-slate-400"
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-3 sm:justify-end">
-                <div className="hidden md:flex items-center gap-2 px-2 text-xs text-slate-700 dark:text-slate-200">
-                  <span>Monitoring:</span>
-                  <span className="font-semibold text-[#123D2B] dark:text-sky-200 max-w-[160px] truncate">
-                    {aqi.locationName}
-                  </span>
+          {hasMounted ? (
+            <form
+              onSubmit={handleSubmit}
+              noValidate
+              className="liquid-glass-card-aqua rounded-3xl p-3"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <label htmlFor="hero-city-search" className="sr-only">
+                    Check live air quality by city
+                  </label>
+                  <MapPin
+                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0E7C8D] dark:text-sky-300"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="hero-city-search"
+                    type="text"
+                    autoComplete="off"
+                    value={cityQuery}
+                    onChange={(e) => {
+                      setCityQuery(e.target.value);
+                      if (inputError) setInputError(null);
+                    }}
+                    placeholder="Check live AQI for any city (e.g., New Delhi, Lahore, Beijing, Salt Lake City)"
+                    aria-describedby={inputError ? 'hero-city-error' : undefined}
+                    aria-invalid={Boolean(inputError)}
+                    className="liquid-input min-h-[46px] w-full rounded-full pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100 dark:placeholder:text-slate-400"
+                  />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="liquid-btn-secondary inline-flex min-h-[46px] w-full sm:w-auto items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold disabled:opacity-60 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E7C8D] focus-visible:ring-offset-2"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Search className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  <span>Check Live AQI</span>
-                </button>
-              </div>
-            </div>
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <div className="hidden md:flex items-center gap-2 px-2 text-xs text-slate-700 dark:text-slate-200">
+                    <span>Monitoring:</span>
+                    <span className="font-semibold text-[#123D2B] dark:text-sky-200 max-w-[160px] truncate">
+                      {aqi.locationName}
+                    </span>
+                  </div>
 
-            {inputError && (
-              <p id="hero-city-error" className="mt-2 px-2 text-xs text-red-700 dark:text-red-400">
-                {inputError}
-              </p>
-            )}
-          </form>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="liquid-btn-secondary inline-flex min-h-[46px] w-full sm:w-auto items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold disabled:opacity-60 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E7C8D] focus-visible:ring-offset-2"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Search className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    <span>Check Live AQI</span>
+                  </button>
+                </div>
+              </div>
+
+              {inputError && (
+                <p
+                  id="hero-city-error"
+                  className="mt-2 px-2 text-xs text-red-700 dark:text-red-400"
+                >
+                  {inputError}
+                </p>
+              )}
+            </form>
+          ) : (
+            <div className="liquid-glass-card-aqua h-[70px] rounded-3xl p-3" aria-hidden="true" />
+          )}
 
           {error && (
             <div

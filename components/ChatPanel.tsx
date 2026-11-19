@@ -225,6 +225,7 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
           <input
             id="chat-input"
             type="text"
+            autoComplete="off"
             value={input}
             maxLength={INPUT_LIMITS.chatMessageMaxLength}
             onChange={(e) => setInput(e.target.value)}

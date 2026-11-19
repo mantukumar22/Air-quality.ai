@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Loader2, SlidersHorizontal } from 'lucide-react';
-import { userProfileSchema } from '@/lib/schemas';
+import { INPUT_LIMITS } from '@/lib/constants';
+import { sanitizeText } from '@/lib/sanitize';
 import type {
   BudgetLevel,
   CommuteMode,
@@ -36,7 +37,7 @@ const BUDGET_OPTIONS: Array<{ id: BudgetLevel; label: string; hint: string }> = 
 ];
 
 /**
- * Household profile form with Zod validation, debounced city input,
+ * Household profile form with input sanitization, debounced city input,
  * accessible field associations (aria-describedby), and >=44px touch targets.
  */
 export function ProfileForm({
@@ -85,22 +86,25 @@ export function ProfileForm({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const parsed = userProfileSchema.safeParse(profile);
-    if (!parsed.success) {
-      const firstIssue = parsed.error.issues[0];
-      if (firstIssue?.path.includes('city')) {
-        setCityError(firstIssue.message);
-        setFormError(null);
-      } else {
-        setCityError(null);
-        setFormError(firstIssue?.message ?? 'Please review your profile inputs.');
-      }
+    const cleanedCity = sanitizeText(profile.city.trim(), INPUT_LIMITS.cityMaxLength);
+    if (cleanedCity.length < 2) {
+      setCityError('Please enter a city or neighborhood name (at least 2 characters).');
+      setFormError(null);
+      return;
+    }
+    if (cleanedCity.length > INPUT_LIMITS.cityMaxLength) {
+      setCityError('City name must be 100 characters or fewer.');
+      setFormError(null);
       return;
     }
 
     setCityError(null);
     setFormError(null);
-    onSubmitPlan(parsed.data);
+    onSubmitPlan({
+      ...profile,
+      city: cleanedCity,
+      householdGroups: profile.householdGroups.slice(0, 4),
+    });
   };
 
   return (
@@ -144,6 +148,7 @@ export function ProfileForm({
             id="profile-city"
             name="city"
             type="text"
+            autoComplete="off"
             value={profile.city}
             onChange={(e) => handleCityChange(e.target.value)}
             aria-describedby={cityError ? 'profile-city-error' : 'profile-city-hint'}

@@ -11,7 +11,7 @@ export function Footer() {
     <footer className="mt-12 border-t border-white/60 bg-white/55 backdrop-blur-xl dark:border-white/15 dark:bg-[#081728]/75">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-xs text-slate-700 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:text-slate-300">
         <div className="flex items-center gap-2.5">
-          <span className="h-7 w-7 overflow-hidden rounded-lg border border-white/80 bg-white/80 shadow-xs shrink-0 dark:border-white/20 dark:bg-white/10">
+          <span className="inline-block h-7 w-7 overflow-hidden rounded-lg border border-white/80 bg-white/80 shadow-xs shrink-0 dark:border-white/20 dark:bg-white/10">
             <SmartImage
               src={airwiseLogoImg}
               alt="AirWise logo"

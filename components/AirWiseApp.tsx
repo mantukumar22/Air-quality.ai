@@ -1,9 +1,8 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ArrowUp } from 'lucide-react';
-import { MotionConfig, motion } from 'motion/react';
 import { AqiHero } from '@/components/AqiHero';
 import { FeatureTrio } from '@/components/FeatureTrio';
 import { MedicalDisclaimer } from '@/components/MedicalDisclaimer';
@@ -56,6 +55,10 @@ const ChatPanel = dynamic(() => import('@/components/ChatPanel').then((m) => m.C
   ),
 });
 
+function subscribeNoop(): () => void {
+  return () => {};
+}
+
 /**
  * Main interactive AirWise workspace following the alternating light-cream,
  * pastel-trio, and deep-emerald band cadence.
@@ -64,6 +67,11 @@ export function AirWiseApp() {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [activeTab, setActiveTab] = useState<RecommendationFilterTab>('all');
   const initialFallbackAqi = useMemo(() => getFallbackAqiReading(DEFAULT_PROFILE.city), []);
+  const hasMounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  );
 
   const { theme, toggleTheme } = useTheme();
   const {
@@ -122,39 +130,42 @@ export function AirWiseApp() {
   );
 
   return (
-    <MotionConfig reducedMotion="user">
-      <div id="top" className="relative">
-        <SkyBackdrop />
-        <AqiHero
-          aqi={aqi}
-          isLoading={isAqiLoading}
-          isLocating={isLocating}
-          error={aqiError}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onSearchCity={handleHeroCitySearch}
-          onUseGeolocation={handleUseGeolocation}
-          onSelectCategory={setActiveTab}
-        />
+    <div id="top" className="relative">
+      <SkyBackdrop />
+      <AqiHero
+        aqi={aqi}
+        isLoading={isAqiLoading}
+        isLocating={isLocating}
+        error={aqiError}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onSearchCity={handleHeroCitySearch}
+        onUseGeolocation={handleUseGeolocation}
+        onSelectCategory={setActiveTab}
+      />
 
-        <main id="main-content" className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6">
-          {/* Deep Forest Band: Winter Smog Playbooks */}
+      <main id="main-content" className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6">
+        {/* Deep Forest Band: Winter Smog Playbooks */}
+        {hasMounted ? (
           <ScenarioShowcase onSelectCategory={setActiveTab} />
+        ) : (
+          <section
+            id="scenarios"
+            aria-hidden="true"
+            className="liquid-glass-band-emerald h-80 rounded-3xl px-4 py-8 sm:px-8 sm:py-10"
+          />
+        )}
 
-          {/* 3-Column Pastel Bento Band */}
-          <FeatureTrio />
+        {/* 3-Column Pastel Bento Band */}
+        <FeatureTrio />
 
-          {/* Medical Safety Notice */}
-          <MedicalDisclaimer />
+        {/* Medical Safety Notice */}
+        <MedicalDisclaimer />
 
-          {/* Two-column workspace: Household Profile + Before/After Impact Dashboard */}
-          <motion.div
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="grid gap-8 lg:grid-cols-12 lg:items-start"
-          >
-            <div className="lg:col-span-5">
+        {/* Two-column workspace: Household Profile + Before/After Impact Dashboard */}
+        <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
+          <div className="lg:col-span-5">
+            {hasMounted ? (
               <ProfileForm
                 profile={profile}
                 isGenerating={isGenerating}
@@ -164,15 +175,23 @@ export function AirWiseApp() {
                   void fetchByCity(city);
                 }}
               />
-            </div>
+            ) : (
+              <section
+                id="profile-section"
+                aria-hidden="true"
+                className="liquid-glass-card h-96 rounded-3xl p-5 sm:p-6 animate-pulse"
+              />
+            )}
+          </div>
 
-            <div className="lg:col-span-7">
-              <ImpactDashboard metrics={impactMetrics} />
-            </div>
-          </motion.div>
+          <div className="lg:col-span-7">
+            <ImpactDashboard metrics={impactMetrics} />
+          </div>
+        </div>
 
-          {/* Structured Recommendations & Persistent Checklist */}
-          {plan && (
+        {/* Structured Recommendations & Persistent Checklist */}
+        {hasMounted ? (
+          plan && (
             <RecommendationList
               plan={plan}
               isGenerating={isGenerating}
@@ -183,43 +202,49 @@ export function AirWiseApp() {
               onToggleItem={toggleItem}
               onResetChecklist={resetChecklist}
             />
-          )}
-
-          {/* Deep Forest Band: Community Actions & Neighbor Share Summary */}
-          {plan && (
-            <CommunitySection
-              communityActions={plan.communityActions}
-              neighborShareSummary={plan.neighborShareSummary}
-              checkedIds={checkedIds}
-              onToggleItem={toggleItem}
-            />
-          )}
-
-          {/* Grounded Streaming AI Follow-up */}
-          <ChatPanel profile={profile} aqi={aqi} />
-
-          {/* Iridescent Liquid Glass Closing Invitation Band */}
+          )
+        ) : (
           <section
-            aria-label="Back to live air quality summary"
-            className="liquid-glass-card-iridescent rounded-3xl px-6 py-8 text-center"
+            id="action-plan"
+            aria-hidden="true"
+            className="liquid-glass-card h-72 rounded-3xl p-5 sm:p-6 animate-pulse"
+          />
+        )}
+
+        {/* Deep Forest Band: Community Actions & Neighbor Share Summary */}
+        {hasMounted && plan && (
+          <CommunitySection
+            communityActions={plan.communityActions}
+            neighborShareSummary={plan.neighborShareSummary}
+            checkedIds={checkedIds}
+            onToggleItem={toggleItem}
+          />
+        )}
+
+        {/* Grounded Streaming AI Follow-up */}
+        {hasMounted && <ChatPanel profile={profile} aqi={aqi} />}
+
+        {/* Iridescent Liquid Glass Closing Invitation Band */}
+        <section
+          aria-label="Back to live air quality summary"
+          className="liquid-glass-card-iridescent rounded-3xl px-6 py-8 text-center"
+        >
+          <h2 className="text-2xl font-bold text-[#123D2B] dark:text-white">
+            Ready for Cleaner Winter Mornings?
+          </h2>
+          <p className="mt-1.5 mx-auto max-w-lg text-sm text-slate-700 dark:text-slate-300">
+            Update your location anytime for fresh Open-Meteo telemetry or adjust your household
+            profile for updated air-quality steps.
+          </p>
+          <a
+            href="#top"
+            className="liquid-btn-primary mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5]"
           >
-            <h2 className="text-2xl font-bold text-[#123D2B] dark:text-white">
-              Ready for Cleaner Winter Mornings?
-            </h2>
-            <p className="mt-1.5 mx-auto max-w-lg text-sm text-slate-700 dark:text-slate-300">
-              Update your location anytime for fresh Open-Meteo telemetry or adjust your household
-              profile for updated air-quality steps.
-            </p>
-            <a
-              href="#top"
-              className="liquid-btn-primary mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5]"
-            >
-              <ArrowUp className="h-4 w-4" aria-hidden="true" />
-              <span>Check Another Location</span>
-            </a>
-          </section>
-        </main>
-      </div>
-    </MotionConfig>
+            <ArrowUp className="h-4 w-4" aria-hidden="true" />
+            <span>Check Another Location</span>
+          </a>
+        </section>
+      </main>
+    </div>
   );
 }
