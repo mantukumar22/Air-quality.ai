@@ -3,7 +3,15 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { buildFallbackPlan } from '@/lib/fallbackPlan';
-import type { AqiReading, RecommendationPlan, UserProfile } from '@/types/airwise';
+import type { ApiErrorDetail, AqiReading, RecommendationPlan, UserProfile } from '@/types/airwise';
+
+function extractErrorMessage(error: string | ApiErrorDetail | undefined, fallback: string): string {
+  if (typeof error === 'string' && error.trim()) return error;
+  if (error && typeof error === 'object' && typeof error.message === 'string') {
+    return error.message;
+  }
+  return fallback;
+}
 
 export interface UseRecommendationsResult {
   plan: RecommendationPlan | null;
@@ -98,11 +106,13 @@ export function useRecommendations(
 
         const data = (await response.json().catch(() => ({}))) as {
           plan?: RecommendationPlan;
-          error?: string;
+          error?: string | ApiErrorDetail;
         };
 
         if (!response.ok || !data.plan) {
-          throw new Error(data.error || 'AI recommendation service returned an error.');
+          throw new Error(
+            extractErrorMessage(data.error, 'AI recommendation service returned an error.')
+          );
         }
 
         setLivePlan(data.plan);

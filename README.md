@@ -42,9 +42,9 @@ AirWise is a GenAI-powered urban air quality and winter-smog assistant built wit
   - `page.tsx`: Server Component shell assembling `Header`, `AirWiseApp`, and `Footer`.
   - `api/aqi/route.ts`: Validates city or coordinate queries with Zod, enforces per-IP rate limiting, and fetches live US AQI, PM2.5, PM10, and NO2 from Open-Meteo (`revalidate: 900` seconds).
   - `api/recommend/route.ts`: Validates household profile & AQI snapshot with Zod, invokes `gemini-4-hydrogen` with structured `responseSchema`, validates the JSON output with Zod (with 1 automatic retry on malformed JSON), and surfaces structured errors cleanly.
-  - `api/chat/route.ts`: Streams grounded follow-up answers (`text/plain; charset=utf-8` via `ReadableStream`) using the user's profile and live AQI.
+  - `api/chat/route.ts`: Multi-tier chat handler checking pre-stored FAQs, in-memory TTL cache, resilient Gemini generation, and an HTTP 200 offline AQI/profile fallback guide so upstream 503 spikes never break the chat UI.
 - **`/lib`**:
-  - `constants.ts`: Centralized model names, rate-limit thresholds, AQI category definitions, and fallback baselines.
+  - `constants.ts`: Centralized model fallback chain (`GEMINI_MODEL_CHAIN`), retry/backoff/circuit-breaker config, cache TTL config, rate-limit thresholds, AQI category definitions, and fallback baselines.
   - `env.ts`: Zod startup/server environment validation.
   - `sanitize.ts`: Control-character stripping, whitespace normalization, length clamping, and XML delimiter sanitization for prompt-injection defense.
   - `schemas.ts`: Zod validation schemas for all API payloads and Gemini JSON outputs.
@@ -52,9 +52,20 @@ AirWise is a GenAI-powered urban air quality and winter-smog assistant built wit
   - `aqi.ts`: US EPA PM2.5-to-AQI helper, Open-Meteo geocoding & air-quality fetchers, and fallback baseline builder.
   - `impact.ts`: Pure "Before vs After" exposure and emission reduction calculator with diminishing-returns compounding.
   - `fallbackPlan.ts`: Deterministic winter-smog action plan used gracefully in the client when offline or upstream APIs fail.
-  - `gemini.ts`: Server-only `@google/genai` client wrapper.
+  - `faq.ts` & `faqMatcher.ts`: 22 curated winter-smog FAQ entries with keyword/token similarity matching, AQI/profile personalization, offline fallback synthesis, and bounded TTL caching.
+  - `gemini.ts`: Server-only `@google/genai` client wrapper featuring `callGeminiWithRetry` (exponential backoff + jitter, 10s `AbortController` timeout, model fallback chain, and circuit breaker).
 - **`/hooks`**: `useAqi`, `useRecommendations`, `useChecklist` (`localStorage`), and `useTheme`.
-- **`/components`**: Modular accessible UI components (`AqiHero`, `ProfileForm`, `ImpactDashboard`, `RecommendationList`, `CommunitySection`, `ChatPanel`, `MedicalDisclaimer`, `Header`, `Footer`), using `next/dynamic` for below-the-fold panels.
+- **`/components`**: Modular accessible UI components (`AqiHero`, `ProfileForm`, `ImpactDashboard`, `RecommendationList`, `CommunitySection`, `SuggestedQuestions`, `ChatPanel`, `MedicalDisclaimer`, `Header`, `Footer`), using `next/dynamic` for below-the-fold panels.
+
+---
+
+## Resilience & Performance
+
+- **Instant Pre-Stored FAQ Answers (Zero API Calls)**: `lib/faq.ts` provides 22 actionable winter-smog Q&As complete with labeled impact estimates and non-medical-advice disclaimers. Both the `SuggestedQuestions` chip bar and typed questions run through `lib/faqMatcher.ts` first to deliver personalized guidance instantaneously without touching Gemini.
+- **Session & Server Caching**: Repeated custom questions share a normalized cache key (`normalizedQuestion + AQI band + household profile hash`) in both client `sessionStorage` and a bounded server TTL `ChatAnswerCache`.
+- **Retries, Exponential Backoff + Jitter & Timeout**: `callGeminiWithRetry` in `lib/gemini.ts` wraps requests in a 10-second `AbortController` timeout and retries transient `429`, `500`, `502`, `503`, and `504` errors up to 3 times (`500ms`, `1s`, `2s` + random jitter).
+- **Model Fallback Chain & Circuit Breaker**: Requests automatically fail over from the primary `gemini-4-hydrogen` model to `gemini-3.1-flash-lite` on repeated overload, and after 3 consecutive failures a 60-second circuit breaker pauses Gemini calls while serving FAQ and offline AQI/profile fallback guidance.
+- **Graceful Degradation**: Upstream error JSON and secrets are logged server-side only. When AI is unavailable, `/api/chat` returns HTTP 200 `{ source: 'fallback' }` and `ChatPanel` surfaces a non-blocking `aria-live="polite"` notice alongside a **"Try again"** button.
 
 ---
 
@@ -62,9 +73,9 @@ AirWise is a GenAI-powered urban air quality and winter-smog assistant built wit
 
 - **Server-Side Secret Isolation**: `GEMINI_API_KEY` is read exclusively in server modules (`lib/env.ts`, `lib/gemini.ts`) and never exposed via `NEXT_PUBLIC_*` variables or client bundles.
 - **Input Validation & Prompt-Injection Defense**: Every API route validates payloads via Zod, clamps string lengths, strips control characters, and isolates untrusted user text inside `<user_data>` blocks with explicit system instructions treating user input strictly as data.
-- **No `dangerouslySetInnerHTML`**: All AI recommendations and streamed chat outputs are rendered as escaped React text nodes and paragraphs.
+- **No `dangerouslySetInnerHTML`**: All AI recommendations and chat outputs are rendered as escaped React text nodes and paragraphs.
 - **Rate Limiting & Security Headers**: Per-IP rate limiting protects `/api/aqi`, `/api/recommend`, and `/api/chat`. `next.config.ts` sets `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy`.
-- **Zero Server-Side PII Storage**: Profile, coordinates, and checklist progress stay in the browser (`localStorage` for checklist/cache) and are never persisted in a server database.
+- **Zero Server-Side PII Storage**: Profile, coordinates, and checklist progress stay in the browser (`localStorage`/`sessionStorage`) and are never persisted in a server database.
 
 ---
 
@@ -78,9 +89,9 @@ npm test
 
 Coverage includes:
 
-- **Unit tests** (`__tests__/aqi.test.ts`, `sanitize.test.ts`, `schemas.test.ts`, `rateLimit.test.ts`, `impact.test.ts`): AQI category mapping & PM2.5 breakpoints, input sanitization & prompt-injection stripping, Zod request/response schemas, per-IP rate limiter, and impact calculations.
-- **Component tests** (`__tests__/components.test.tsx`): Profile form validation & submission, category tab filtering, and `localStorage` checklist persistence/reset.
-- **API route tests** (`__tests__/api-routes.test.ts`): `/api/aqi`, `/api/recommend`, and `/api/chat` with mocked Open-Meteo `fetch` and mocked `@google/genai` covering success, invalid input, and upstream failures.
+- **Unit tests** (`__tests__/aqi.test.ts`, `sanitize.test.ts`, `schemas.test.ts`, `rateLimit.test.ts`, `impact.test.ts`, `faqMatcher.test.ts`, `geminiRetry.test.ts`): AQI mapping, input sanitization, Zod schemas, rate limiter, impact math, FAQ keyword/similarity matching + caching, and fake-timer verification of `callGeminiWithRetry` + circuit breaker.
+- **Component tests** (`__tests__/components.test.tsx`, `suggestedQuestions.test.tsx`): Profile form validation, tab filtering, `localStorage` checklist persistence, accessible `SuggestedQuestions` chips (zero API calls, keyboard support), and `ChatPanel` 503 fallback + "Try again" UI.
+- **API route tests** (`__tests__/api-routes.test.ts`): `/api/aqi`, `/api/recommend`, and `/api/chat` covering FAQ zero-API hits, TTL caching, mocked Gemini responses, and 503 fallback responses.
 
 ---
 

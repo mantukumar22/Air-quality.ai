@@ -12,8 +12,12 @@ export async function POST(request: NextRequest) {
   const rate = recommendRateLimiter.check(clientIp);
 
   if (!rate.allowed) {
+    const message = 'Rate limit exceeded for plan generation. Please wait a minute and retry.';
     return NextResponse.json(
-      { error: 'Rate limit exceeded for plan generation. Please wait a minute and retry.' },
+      {
+        error: message,
+        errorDetail: { code: 'RATE_LIMITED', message, retryable: true },
+      },
       {
         status: 429,
         headers: { 'Retry-After': String(Math.ceil((rate.resetAt - Date.now()) / 1000)) },
@@ -25,14 +29,23 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON request body.' }, { status: 400 });
+    const message = 'Invalid JSON request body.';
+    return NextResponse.json(
+      {
+        error: message,
+        errorDetail: { code: 'INVALID_JSON', message, retryable: false },
+      },
+      { status: 400 }
+    );
   }
 
   const parsed = recommendRequestSchema.safeParse(body);
   if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? 'Invalid household profile or AQI context.';
     return NextResponse.json(
       {
-        error: parsed.error.issues[0]?.message ?? 'Invalid household profile or AQI context.',
+        error: message,
+        errorDetail: { code: 'INVALID_REQUEST', message, retryable: false },
       },
       { status: 400 }
     );
@@ -43,6 +56,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ plan }, { status: 200 });
   } catch (err) {
     const formatted = formatGeminiApiError(err);
-    return NextResponse.json({ error: formatted.message }, { status: formatted.statusCode });
+    console.error('[api/recommend] Upstream AI error:', {
+      code: formatted.code,
+      statusCode: formatted.statusCode,
+      message: formatted.message,
+    });
+    return NextResponse.json(
+      {
+        error: formatted.message,
+        errorDetail: formatted.toErrorDetail(),
+      },
+      { status: formatted.statusCode }
+    );
   }
 }

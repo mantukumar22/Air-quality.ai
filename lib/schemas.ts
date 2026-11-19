@@ -108,6 +108,7 @@ export const chatRequestSchema = z.object({
     .array(chatMessageInputSchema)
     .min(1, 'At least one message is required.')
     .max(INPUT_LIMITS.chatHistoryMaxItems),
+  retryLive: z.boolean().optional(),
 });
 
 export const recommendationCategoryEnum = z.enum([

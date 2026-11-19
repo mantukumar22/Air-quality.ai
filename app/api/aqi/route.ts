@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchOpenMeteoAqi } from '@/lib/aqi';
+import { createApiErrorBody } from '@/lib/gemini';
 import { aqiRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { aqiQuerySchema } from '@/lib/schemas';
 
@@ -13,7 +14,11 @@ export async function GET(request: NextRequest) {
 
   if (!rate.allowed) {
     return NextResponse.json(
-      { error: 'Too many air-quality lookups. Please wait a minute and try again.' },
+      createApiErrorBody(
+        'RATE_LIMITED',
+        'Too many air-quality lookups. Please wait a minute and try again.',
+        true
+      ),
       {
         status: 429,
         headers: { 'Retry-After': String(Math.ceil((rate.resetAt - Date.now()) / 1000)) },
@@ -34,9 +39,11 @@ export async function GET(request: NextRequest) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      {
-        error: parsed.error.issues[0]?.message ?? 'Invalid location query parameters.',
-      },
+      createApiErrorBody(
+        'VALIDATION_ERROR',
+        parsed.error.issues[0]?.message ?? 'Invalid location query parameters.',
+        false
+      ),
       { status: 400 }
     );
   }
@@ -53,9 +60,22 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Unable to reach live air quality service.';
-    const status = message.includes('not found') ? 404 : 502;
-    return NextResponse.json({ error: message }, { status });
+    const rawMsg = err instanceof Error ? err.message : '';
+    const isNotFound = rawMsg.toLowerCase().includes('not found');
+    console.error('[AirWise][/api/aqi] Lookup failed:', {
+      status: isNotFound ? 404 : 502,
+      detail: rawMsg || 'Unknown AQI lookup error',
+    });
+
+    return NextResponse.json(
+      createApiErrorBody(
+        isNotFound ? 'LOCATION_NOT_FOUND' : 'AQI_UPSTREAM_ERROR',
+        isNotFound
+          ? 'Location not found. Please check the city spelling or try nearby coordinates.'
+          : 'Unable to reach the live air quality service right now.',
+        !isNotFound
+      ),
+      { status: isNotFound ? 404 : 502 }
+    );
   }
 }

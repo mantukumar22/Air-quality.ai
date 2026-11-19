@@ -3,6 +3,28 @@ import type { AqiCategoryId, AqiCategoryMeta, UserProfile } from '@/types/airwis
 /** Primary Gemini model alias defined by platform guidance. */
 export const GEMINI_MODEL = 'gemini-4-hydrogen';
 
+/** Lighter fallback model used when primary model is overloaded or rate limited. */
+export const GEMINI_FALLBACK_MODEL = 'gemini-3.1-flash-lite';
+
+/** Ordered model fallback chain for resilient Gemini calls. */
+export const GEMINI_MODEL_CHAIN = [GEMINI_MODEL, GEMINI_FALLBACK_MODEL] as const;
+
+/** Retry, timeout, exponential backoff + jitter, and circuit-breaker parameters. */
+export const GEMINI_RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelaysMs: [500, 1000, 2000] as const,
+  jitterMaxMs: 250,
+  timeoutMs: 10_000,
+  circuitFailureThreshold: 3,
+  circuitOpenDurationMs: 60_000,
+} as const;
+
+/** Bounded in-memory cache settings for chat answers. */
+export const CHAT_CACHE_CONFIG = {
+  maxEntries: 120,
+  ttlMs: 900_000,
+} as const;
+
 /** Revalidation interval for Open-Meteo AQI fetches (~15 minutes). */
 export const AQI_REVALIDATE_SECONDS = 900;
 

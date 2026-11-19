@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getFallbackAqiReading } from '@/lib/aqi';
 import { DEFAULT_PROFILE, STORAGE_KEYS } from '@/lib/constants';
-import type { AqiReading } from '@/types/airwise';
+import type { ApiErrorDetail, AqiReading } from '@/types/airwise';
+
+function extractErrorMessage(error: string | ApiErrorDetail | undefined, fallback: string): string {
+  if (typeof error === 'string' && error.trim()) return error;
+  if (error && typeof error === 'object' && typeof error.message === 'string') {
+    return error.message;
+  }
+  return fallback;
+}
 
 export interface UseAqiResult {
   aqi: AqiReading;
@@ -61,10 +69,15 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
       const res = await fetch(`/api/aqi?city=${encodeURIComponent(trimmed)}`, {
         signal: controller.signal,
       });
-      const data = (await res.json().catch(() => ({}))) as { aqi?: AqiReading; error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        aqi?: AqiReading;
+        error?: string | ApiErrorDetail;
+      };
 
       if (!res.ok || !data.aqi) {
-        throw new Error(data.error || 'Could not load live air quality for that location.');
+        throw new Error(
+          extractErrorMessage(data.error, 'Could not load live air quality for that location.')
+        );
       }
 
       setAqi(data.aqi);
@@ -122,10 +135,15 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
         )}`,
         { signal: controller.signal }
       );
-      const data = (await res.json().catch(() => ({}))) as { aqi?: AqiReading; error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        aqi?: AqiReading;
+        error?: string | ApiErrorDetail;
+      };
 
       if (!res.ok || !data.aqi) {
-        throw new Error(data.error || 'Unable to load air quality for your coordinates.');
+        throw new Error(
+          extractErrorMessage(data.error, 'Unable to load air quality for your coordinates.')
+        );
       }
 
       setAqi(data.aqi);
@@ -156,9 +174,12 @@ export function useAqi(initialCity = DEFAULT_PROFILE.city): UseAqiResult {
 
     fetch(`/api/aqi?city=${encodeURIComponent(trimmed)}`, { signal: controller.signal })
       .then(async (res) => {
-        const data = (await res.json().catch(() => ({}))) as { aqi?: AqiReading; error?: string };
+        const data = (await res.json().catch(() => ({}))) as {
+          aqi?: AqiReading;
+          error?: string | ApiErrorDetail;
+        };
         if (!res.ok || !data.aqi) {
-          throw new Error(data.error || 'Could not load live air quality.');
+          throw new Error(extractErrorMessage(data.error, 'Could not load live air quality.'));
         }
         return data.aqi;
       })

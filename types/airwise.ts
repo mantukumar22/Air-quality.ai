@@ -117,9 +117,40 @@ export interface ImpactMetrics {
   activeEmissionIndex: number;
 }
 
+export type ChatResponseSource = 'faq' | 'cache' | 'gemini' | 'fallback';
+
+export type FaqCategory = 'indoor' | 'commute' | 'health' | 'cooking' | 'heating' | 'community';
+
+export interface FaqEntry {
+  id: string;
+  question: string;
+  keywords: string[];
+  answer: string;
+  impact: string;
+  category: FaqCategory;
+}
+
+export interface ApiErrorDetail {
+  code: string;
+  message: string;
+  retryable: boolean;
+}
+
+export interface ChatApiResponse {
+  reply: string;
+  source: ChatResponseSource;
+  faqId?: string;
+  impact?: string;
+  notice?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  source?: ChatResponseSource;
+  impact?: string;
+  notice?: string;
+  retryQuestion?: string;
 }

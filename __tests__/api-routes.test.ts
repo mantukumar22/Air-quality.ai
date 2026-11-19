@@ -8,10 +8,11 @@ import { POST as postChatRoute } from '@/app/api/chat/route';
 import { getFallbackAqiReading } from '@/lib/aqi';
 import { DEFAULT_PROFILE } from '@/lib/constants';
 import { buildFallbackPlan } from '@/lib/fallbackPlan';
+import { chatAnswerCache } from '@/lib/faqMatcher';
+import { resetGeminiCircuitBreaker } from '@/lib/gemini';
 import { aqiRateLimiter, chatRateLimiter, recommendRateLimiter } from '@/lib/rateLimit';
 
 const mockGenerateContent = jest.fn();
-const mockGenerateContentStream = jest.fn();
 
 jest.mock('@google/genai', () => {
   const actual = jest.requireActual('@google/genai');
@@ -20,7 +21,6 @@ jest.mock('@google/genai', () => {
     GoogleGenAI: jest.fn().mockImplementation(() => ({
       models: {
         generateContent: mockGenerateContent,
-        generateContentStream: mockGenerateContentStream,
       },
     })),
   };
@@ -29,19 +29,23 @@ jest.mock('@google/genai', () => {
 describe('AirWise API Route Handlers', () => {
   const originalFetch = global.fetch;
   const originalApiKey = process.env.GEMINI_API_KEY;
+  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     aqiRateLimiter.reset();
     recommendRateLimiter.reset();
     chatRateLimiter.reset();
+    chatAnswerCache.clear();
+    resetGeminiCircuitBreaker();
     mockGenerateContent.mockReset();
-    mockGenerateContentStream.mockReset();
     process.env.GEMINI_API_KEY = 'test-server-secret-key';
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
     process.env.GEMINI_API_KEY = originalApiKey;
+    consoleErrorSpy.mockRestore();
   });
 
   describe('GET /api/aqi', () => {
@@ -187,52 +191,140 @@ describe('AirWise API Route Handlers', () => {
         body: JSON.stringify(validBody),
       });
       const resFail = await postRecommendRoute(reqFail);
-      const dataFail = (await resFail.json()) as { error: string };
+      const dataFail = (await resFail.json()) as {
+        error: string;
+        errorDetail: { code: string; message: string; retryable: boolean };
+      };
       expect(resFail.status).toBe(503);
       expect(dataFail.error).not.toContain('{');
       expect(dataFail.error).toContain('temporarily busy');
+      expect(dataFail.errorDetail.retryable).toBe(true);
     });
   });
 
   describe('POST /api/chat', () => {
-    const chatBody = {
-      profile: DEFAULT_PROFILE,
-      aqi: {
-        locationName: 'New Delhi',
-        usAqi: 185,
-        pm25: 102.4,
-        pm10: 168.0,
-        no2: 54.2,
-        categoryLabel: 'Unhealthy',
-      },
-      messages: [{ role: 'user', content: 'When should I open windows today?' }],
+    const baseAqi = {
+      locationName: 'New Delhi',
+      usAqi: 185,
+      pm25: 102.4,
+      pm10: 168.0,
+      no2: 54.2,
+      categoryLabel: 'Unhealthy',
     };
 
-    it('returns 400 when messages array is empty', async () => {
+    it('returns typed error JSON with 400 when messages array is empty', async () => {
       const req = new NextRequest('http://localhost/api/chat', {
         method: 'POST',
-        body: JSON.stringify({ ...chatBody, messages: [] }),
+        body: JSON.stringify({
+          profile: DEFAULT_PROFILE,
+          aqi: baseAqi,
+          messages: [],
+        }),
       });
       const res = await postChatRoute(req);
+      const data = (await res.json()) as {
+        error: { code: string; message: string; retryable: boolean };
+      };
       expect(res.status).toBe(400);
+      expect(data.error.code).toBe('INVALID_REQUEST');
+      expect(data.error.retryable).toBe(false);
     });
 
-    it('streams grounded text chunks from mocked Gemini', async () => {
-      async function* mockChunks() {
-        yield { text: 'Open windows briefly ' };
-        yield { text: 'between 1:30 PM and 3:00 PM.' };
-      }
-      mockGenerateContentStream.mockResolvedValueOnce(mockChunks());
+    it('serves FAQ hit immediately with zero Gemini API calls', async () => {
+      const req = new NextRequest('http://localhost/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          profile: DEFAULT_PROFILE,
+          aqi: baseAqi,
+          messages: [{ role: 'user', content: 'How do I make a DIY box fan HEPA purifier?' }],
+        }),
+      });
+      const res = await postChatRoute(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.source).toBe('faq');
+      expect(data.faqId).toBe('faq-diy-purifier');
+      expect(data.reply).toContain('New Delhi');
+      expect(mockGenerateContent).not.toHaveBeenCalled();
+    });
+
+    it('calls Gemini for novel questions and serves subsequent identical queries from cache', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        text: 'Place outdoor sensors on shaded balconies away from dryer vents.',
+      });
+
+      const novelPayload = {
+        profile: DEFAULT_PROFILE,
+        aqi: baseAqi,
+        messages: [
+          {
+            role: 'user',
+            content: 'Where should I mount an outdoor laser nephelometer on my balcony?',
+          },
+        ],
+      };
+
+      const resFirst = await postChatRoute(
+        new NextRequest('http://localhost/api/chat', {
+          method: 'POST',
+          body: JSON.stringify(novelPayload),
+        })
+      );
+      const firstData = await resFirst.json();
+
+      expect(resFirst.status).toBe(200);
+      expect(firstData.source).toBe('gemini');
+      expect(firstData.reply).toContain('shaded balconies');
+      expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+
+      const resSecond = await postChatRoute(
+        new NextRequest('http://localhost/api/chat', {
+          method: 'POST',
+          body: JSON.stringify(novelPayload),
+        })
+      );
+      const secondData = await resSecond.json();
+
+      expect(resSecond.status).toBe(200);
+      expect(secondData.source).toBe('cache');
+      expect(secondData.reply).toBe(firstData.reply);
+      expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns HTTP 200 fallback guidance with source: fallback when Gemini returns 503', async () => {
+      const raw503 = JSON.stringify({
+        error: {
+          code: 503,
+          message: 'Upstream model overloaded.',
+          status: 'UNAVAILABLE',
+        },
+      });
+      mockGenerateContent.mockRejectedValue(new Error(raw503));
 
       const req = new NextRequest('http://localhost/api/chat', {
         method: 'POST',
-        body: JSON.stringify(chatBody),
+        body: JSON.stringify({
+          profile: DEFAULT_PROFILE,
+          aqi: baseAqi,
+          messages: [
+            {
+              role: 'user',
+              content: 'Does apartment corridor pressure affect hallway infiltration?',
+            },
+          ],
+        }),
       });
+
       const res = await postChatRoute(req);
+      const data = await res.json();
 
       expect(res.status).toBe(200);
-      const streamedText = await res.text();
-      expect(streamedText).toBe('Open windows briefly between 1:30 PM and 3:00 PM.');
+      expect(data.source).toBe('fallback');
+      expect(data.notice).toContain('Our AI is busy');
+      expect(data.reply).toContain('Offline guidance');
+      expect(data.reply).not.toContain('UNAVAILABLE');
+      expect(data.reply).not.toContain('{');
     });
   });
 });

@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
+import { ChatPanel } from '@/components/ChatPanel';
 import { ProfileForm } from '@/components/ProfileForm';
 import { RecommendationList } from '@/components/RecommendationList';
+import { SuggestedQuestions } from '@/components/SuggestedQuestions';
 import { useChecklist } from '@/hooks/useChecklist';
 import { getFallbackAqiReading } from '@/lib/aqi';
 import { DEFAULT_PROFILE, STORAGE_KEYS } from '@/lib/constants';
@@ -37,8 +39,14 @@ function ChecklistHarness() {
 }
 
 describe('AirWise interactive components', () => {
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
   it('validates empty/short city input in ProfileForm and submits valid profiles', async () => {
@@ -78,14 +86,69 @@ describe('AirWise interactive components', () => {
     const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.checklist) ?? '[]');
     expect(stored).toHaveLength(1);
 
-    // Filter to Indoor Hacks tab
     await user.click(screen.getByRole('tab', { name: /Indoor Hacks/i }));
     expect(screen.getByText('Indoor Air Quality Hacks')).toBeInTheDocument();
     expect(screen.queryByText('Daily Low-Emission Routine')).not.toBeInTheDocument();
 
-    // Reset checklist clears storage
     await user.click(screen.getByRole('button', { name: /Reset Checklist/i }));
     const cleared = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.checklist) ?? '[]');
     expect(cleared).toHaveLength(0);
+  });
+
+  it('renders 6 to 8 profile-relevant SuggestedQuestions chips and supports keyboard activation', async () => {
+    const user = userEvent.setup();
+    const handleSelect = jest.fn();
+
+    render(
+      <SuggestedQuestions
+        profile={{ ...DEFAULT_PROFILE, householdGroups: ['kids', 'respiratory'] }}
+        onSelectQuestion={handleSelect}
+      />
+    );
+
+    const group = screen.getByRole('group', { name: /Suggested questions/i });
+    const buttons = Array.from(group.querySelectorAll('button'));
+    expect(buttons.length).toBeGreaterThanOrEqual(6);
+    expect(buttons.length).toBeLessThanOrEqual(8);
+
+    expect(
+      screen.getByRole('button', {
+        name: /How do I protect elderly family members and asthma patients\?/i,
+      })
+    ).toBeInTheDocument();
+    const kidsBtn = screen.getByRole('button', {
+      name: /Is it safe for kids to play outside today\?/i,
+    });
+    expect(kidsBtn).toBeInTheDocument();
+
+    kidsBtn.focus();
+    await user.keyboard('{Enter}');
+    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'faq-kids-outdoor-play' })
+    );
+  });
+
+  it('displays an instant FAQ answer with zero fetch requests when clicking a chip in ChatPanel', async () => {
+    const user = userEvent.setup();
+    const fetchSpy = jest.fn();
+    global.fetch = fetchSpy;
+
+    render(
+      <ChatPanel
+        profile={{ ...DEFAULT_PROFILE, householdGroups: ['kids', 'respiratory'] }}
+        aqi={getFallbackAqiReading('New Delhi')}
+      />
+    );
+
+    const chip = screen.getByRole('button', {
+      name: /How do I protect elderly family members and asthma patients\?/i,
+    });
+    await user.click(chip);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(screen.getByText('Instant answer')).toBeInTheDocument();
+    expect(screen.getByText(/sealed clean-air bedroom/i)).toBeInTheDocument();
+    expect(screen.getByText(/Not medical advice/i)).toBeInTheDocument();
   });
 });
