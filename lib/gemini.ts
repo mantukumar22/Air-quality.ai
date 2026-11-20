@@ -134,6 +134,23 @@ export class GeminiServiceError extends Error {
 }
 
 /**
+ * Builds a consistent typed JSON error body without exposing raw upstream details.
+ */
+export function createApiErrorBody(
+  code: string,
+  message: string,
+  retryable: boolean
+): { error: ApiErrorDetail } {
+  return {
+    error: {
+      code,
+      message,
+      retryable,
+    },
+  };
+}
+
+/**
  * Returns true if an HTTP status code represents a transient overload/network spike.
  */
 export function isRetryableStatusCode(status: number | undefined): boolean {

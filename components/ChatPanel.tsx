@@ -171,9 +171,7 @@ export function ChatPanel({ profile, aqi }: ChatPanelProps) {
     typingCursorRef.current = Math.min(36, fullText.length);
     const initialSlice = fullText.slice(0, typingCursorRef.current);
     setMessages((prev) =>
-      prev.map((m) =>
-        m.id === assistantId ? { ...m, content: initialSlice, source, impact } : m
-      )
+      prev.map((m) => (m.id === assistantId ? { ...m, content: initialSlice, source, impact } : m))
     );
 
     if (typingCursorRef.current >= fullText.length) return;

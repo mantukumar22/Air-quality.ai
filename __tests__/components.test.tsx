@@ -102,7 +102,8 @@ describe('AirWise interactive components', () => {
     render(
       <SuggestedQuestions
         profile={{ ...DEFAULT_PROFILE, householdGroups: ['kids', 'respiratory'] }}
-        onSelectQuestion={handleSelect}
+        aqi={getFallbackAqiReading('New Delhi')}
+        onSelectSuggestion={handleSelect}
       />
     );
 
@@ -125,7 +126,8 @@ describe('AirWise interactive components', () => {
     await user.keyboard('{Enter}');
     expect(handleSelect).toHaveBeenCalledTimes(1);
     expect(handleSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'faq-kids-outdoor-play' })
+      expect.objectContaining({ id: 'faq-kids-play' }),
+      expect.stringContaining('not medical advice')
     );
   });
 
@@ -147,8 +149,8 @@ describe('AirWise interactive components', () => {
     await user.click(chip);
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(screen.getByText('Instant answer')).toBeInTheDocument();
-    expect(screen.getByText(/sealed clean-air bedroom/i)).toBeInTheDocument();
-    expect(screen.getByText(/Not medical advice/i)).toBeInTheDocument();
+    expect(await screen.findByText('Instant answer')).toBeInTheDocument();
+    expect(await screen.findByText(/sealed clean-air bedroom/i)).toBeInTheDocument();
+    expect(await screen.findByText(/not medical advice/i)).toBeInTheDocument();
   });
 });

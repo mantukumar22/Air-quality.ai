@@ -27,6 +27,13 @@ export const metadata: Metadata = {
   title: 'AirWise: Urban Air Quality Assistant',
   description:
     'GenAI-powered urban air quality and winter smog assistant helping families reduce PM2.5 exposure with live AQI, tailored action plans, and impact tracking.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon.png', type: 'image/png', sizes: '64x64' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   openGraph: {
     title: 'AirWise: Urban Air Quality Assistant',
     description:
