@@ -1,10 +1,17 @@
+/**
+ * @fileoverview Full-viewport serene Earth sky backdrop with drifting cumulus clouds
+ * and open-winged birds flying across the page canvas.
+ */
+
 'use client';
 
 import { FlyingSkyBird, MovingSkyCloud } from '@/components/SkyMotionPrimitives';
 
 /**
- * Full-page Earth sky backdrop with serene atmospheric gradient,
- * left-to-right drifting cumulus clouds, and flying open-winged birds.
+ * Renders the full-page sky gradient, subtle solar glow, moving clouds, and
+ * flying open-winged birds behind the AirWise workspace.
+ *
+ * @returns Fixed non-interactive atmospheric background element.
  */
 export function SkyBackdrop() {
   return (

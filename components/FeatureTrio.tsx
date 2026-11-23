@@ -1,25 +1,30 @@
+/**
+ * @fileoverview Three-column pastel Liquid Glass highlight cards surfacing
+ * bedroom filtration, core winter-smog habits, and impact tracking shortcuts.
+ */
+
 'use client';
 
 import { ArrowRight, Check, Home, Leaf, ShieldCheck } from 'lucide-react';
 import { SmartImage } from '@/components/SmartImage';
-import indoorSanctuaryImg from '@/src/assets/images/indoor_sanctuary_living_1794986284632.jpg';
 import diyHepaRoomImg from '@/src/assets/images/diy_hepa_filter_room_1794986285578.jpg';
+import indoorSanctuaryImg from '@/src/assets/images/indoor_sanctuary_living_1794986284632.jpg';
 
 const QUICK_HABITS = [
   'Seal street-facing drafts 6–10 AM',
   'Ventilate 15 min mid-afternoon',
   'Run DIY MERV-13 or HEPA filter',
   'Zero open leaf or trash burning',
-];
+] as const;
 
 /**
- * Three-column pastel bento band inspired by the reference UI's
- * Creative Games / Nature Lessons / Featured Showcase trio.
+ * Three-column pastel bento band presenting core winter-smog quick actions.
+ *
+ * @returns Highlight cards grid section.
  */
 export function FeatureTrio() {
   return (
     <section aria-label="AirWise quick highlights" className="grid gap-5 lg:grid-cols-3">
-      {/* Card 1: Warm Liquid Glass — DIY Clean Air Room */}
       <article className="liquid-glass-card-warm flex flex-col justify-between rounded-3xl p-6">
         <div>
           <div className="flex items-center gap-2.5 text-[#9A3412] dark:text-[#FF8A4C]">
@@ -51,7 +56,6 @@ export function FeatureTrio() {
         </a>
       </article>
 
-      {/* Card 2: Mint Liquid Glass — Core Winter Smog Habits */}
       <article className="liquid-glass-card-mint flex flex-col justify-between rounded-3xl p-6">
         <div>
           <div className="flex items-center gap-2.5 text-[#123D2B] dark:text-emerald-300">
@@ -88,7 +92,6 @@ export function FeatureTrio() {
         </a>
       </article>
 
-      {/* Card 3: Aqua Liquid Glass — Indoor Sanctuary Showcase */}
       <article className="liquid-glass-card-aqua flex flex-col justify-between rounded-3xl p-6">
         <div>
           <div className="flex items-center gap-2.5 text-[#0E7C8D] dark:text-sky-300">

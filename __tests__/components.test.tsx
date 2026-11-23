@@ -77,11 +77,14 @@ describe('AirWise interactive components', () => {
     render(<ChecklistHarness />);
 
     const checkboxes = screen.getAllByRole('checkbox');
+    const firstCheckbox = checkboxes[0];
     expect(checkboxes.length).toBeGreaterThan(3);
-    expect(checkboxes[0]).toHaveAttribute('aria-checked', 'false');
+    expect(firstCheckbox).toBeDefined();
+    if (!firstCheckbox) throw new Error('Expected at least one checkbox');
+    expect(firstCheckbox).toHaveAttribute('aria-checked', 'false');
 
-    await user.click(checkboxes[0]);
-    expect(checkboxes[0]).toHaveAttribute('aria-checked', 'true');
+    await user.click(firstCheckbox);
+    expect(firstCheckbox).toHaveAttribute('aria-checked', 'true');
 
     const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.checklist) ?? '[]');
     expect(stored).toHaveLength(1);

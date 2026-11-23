@@ -1,4 +1,17 @@
-import type { AqiCategoryId, AqiCategoryMeta, UserProfile } from '@/types/airwise';
+/**
+ * @fileoverview Centralized constants, thresholds, model chains, storage keys,
+ * and lookup tables for AirWise so domain rules remain declarative and tunable.
+ */
+
+import type {
+  AqiCategoryId,
+  AqiCategoryMeta,
+  CommuteMode,
+  CookingFuel,
+  HeatingSource,
+  UserProfile,
+  VentilationType,
+} from '@/types/airwise';
 
 /** Primary Gemini model alias defined by platform guidance. */
 export const GEMINI_MODEL = 'gemini-4-hydrogen';
@@ -9,6 +22,9 @@ export const GEMINI_FALLBACK_MODEL = 'gemini-3.1-flash-lite';
 /** Ordered model fallback chain for resilient Gemini calls. */
 export const GEMINI_MODEL_CHAIN = [GEMINI_MODEL, GEMINI_FALLBACK_MODEL] as const;
 
+/** Custom telemetry user-agent attached to server-side Gemini HTTP requests. */
+export const GEMINI_USER_AGENT = 'aistudio-build';
+
 /** Retry, timeout, exponential backoff + jitter, and circuit-breaker parameters. */
 export const GEMINI_RETRY_CONFIG = {
   maxRetries: 3,
@@ -17,16 +33,44 @@ export const GEMINI_RETRY_CONFIG = {
   timeoutMs: 10_000,
   circuitFailureThreshold: 3,
   circuitOpenDurationMs: 60_000,
+  schemaMaxAttempts: 2,
+  retryableHttpStatuses: new Set<number>([429, 500, 502, 503, 504]),
 } as const;
 
-/** Bounded in-memory cache settings for chat answers. */
+/** Bounded in-memory cache settings for server chat answers. */
 export const CHAT_CACHE_CONFIG = {
   maxEntries: 120,
   ttlMs: 900_000,
 } as const;
 
+/** Client-side chat memory and sessionStorage cache limits. */
+export const CLIENT_SESSION_CACHE_CONFIG = {
+  maxMemoryEntries: 40,
+  maxStorageEntries: 30,
+  ttlMs: 900_000,
+} as const;
+
+/** Reduced-motion-aware typing animation cadence shared by chat and FAQ chips. */
+export const TYPING_REVEAL_CONFIG = {
+  chatChunkSizeChars: 36,
+  chipChunkSizeChars: 28,
+  intervalMs: 16,
+} as const;
+
+/** Interactive UI timers and upstream fetch timeouts (in milliseconds). */
+export const UI_TIMING_MS = {
+  cityDebounceMs: 650,
+  copyFeedbackDurationMs: 2500,
+  geolocationTimeoutMs: 8000,
+  geolocationMaxAgeMs: 300_000,
+  aqiFetchTimeoutMs: 8000,
+} as const;
+
 /** Revalidation interval for Open-Meteo AQI fetches (~15 minutes). */
 export const AQI_REVALIDATE_SECONDS = 900;
+
+/** Cache-Control header value for live AQI API responses. */
+export const AQI_CACHE_CONTROL_HEADER = 'public, s-maxage=900, stale-while-revalidate=300';
 
 /** Upstream API endpoints (Open-Meteo requires no API key). */
 export const OPEN_METEO_AIR_QUALITY_URL = 'https://air-quality-api.open-meteo.com/v1/air-quality';
@@ -37,13 +81,19 @@ export const RATE_LIMITS = {
   aqi: { limit: 40, windowMs: 60_000 },
   recommend: { limit: 15, windowMs: 60_000 },
   chat: { limit: 30, windowMs: 60_000 },
+  pruneStoreThreshold: 500,
 } as const;
 
 /** Input clamping constants for security and prompt defense. */
 export const INPUT_LIMITS = {
+  cityMinLength: 2,
+  cityDebounceMinLength: 3,
   cityMaxLength: 100,
+  categoryLabelMaxLength: 60,
   chatMessageMaxLength: 600,
   chatHistoryMaxItems: 10,
+  geminiReplyMaxLength: 2400,
+  householdGroupsMax: 4,
 } as const;
 
 /** Client-side persistence keys (browser only, never server-side). */
@@ -52,6 +102,8 @@ export const STORAGE_KEYS = {
   theme: 'airwise_theme_v1',
   cachedAqi: 'airwise_cached_aqi_v1',
   cachedPlan: 'airwise_cached_plan_v1',
+  chatSessionCache: 'airwise_chat_session_cache_v1',
+  chunkReloadOnce: 'airwise_chunk_reload_once',
 } as const;
 
 /** Default initial household profile for first-visit usability. */
@@ -80,6 +132,168 @@ export const FALLBACK_AQI_VALUES = {
 /** Standard medical & estimate disclaimer copy. */
 export const MEDICAL_DISCLAIMER =
   'AirWise provides informational environmental guidance and estimated exposure reductions, not medical advice. Consult a qualified clinician for respiratory symptoms, asthma action plans, or health emergencies.';
+
+/** Friendly user-facing notice when upstream AI falls back to guide guidance. */
+export const BUSY_AI_NOTICE = "Our AI is busy, here's a quick answer from our guide.";
+
+/** Ordered US AQI upper bounds mapped to category IDs. */
+export const AQI_CATEGORY_THRESHOLDS: ReadonlyArray<readonly [number, AqiCategoryId]> = [
+  [50, 'good'],
+  [100, 'moderate'],
+  [150, 'sensitive'],
+  [200, 'unhealthy'],
+  [300, 'very_unhealthy'],
+] as const;
+
+/** US EPA PM2.5-to-AQI breakpoints: [cLow, cHigh, iLow, iHigh]. */
+export const US_EPA_PM25_BREAKPOINTS: ReadonlyArray<readonly [number, number, number, number]> = [
+  [0.0, 9.0, 0, 50],
+  [9.1, 35.4, 51, 100],
+  [35.5, 55.4, 101, 150],
+  [55.5, 125.4, 151, 200],
+  [125.5, 225.4, 201, 300],
+  [225.5, 500.4, 301, 500],
+] as const;
+
+/** Lookup tables and bounds used by the pure household impact calculator and SVG charts. */
+export const IMPACT_CONSTANTS = {
+  minOutdoorPm25: 5,
+  ventilationInfiltrationMap: {
+    natural_windows: 0.65,
+    exhaust_fans: 0.55,
+    hepa_purifier: 0.38,
+    hvac_filtered: 0.38,
+  } as const satisfies Record<VentilationType, number>,
+  cookingPm25PenaltyMap: {
+    induction: 4,
+    electric_coil: 4,
+    lpg_gas: 11,
+    biomass_solid: 28,
+  } as const satisfies Record<CookingFuel, number>,
+  commuteExposureMultiplierMap: {
+    walking_cycling: 0.22,
+    public_transit: 0.14,
+    carpool: 0.1,
+    private_car: 0.1,
+    remote: 0,
+  } as const satisfies Record<CommuteMode, number>,
+  emissionBaseScore: 20,
+  commuteEmissionScoreMap: {
+    private_car: 28,
+    carpool: 14,
+    public_transit: 8,
+    walking_cycling: 0,
+    remote: 0,
+  } as const satisfies Record<CommuteMode, number>,
+  heatingEmissionScoreMap: {
+    wood_coal: 32,
+    natural_gas: 16,
+    district: 10,
+    electric: 6,
+    none: 0,
+  } as const satisfies Record<HeatingSource, number>,
+  cookingEmissionScoreMap: {
+    biomass_solid: 22,
+    lpg_gas: 10,
+    electric_coil: 4,
+    induction: 0,
+  } as const satisfies Record<CookingFuel, number>,
+  minEmissionIndex: 10,
+  maxEmissionIndex: 100,
+  maxSingleActionPct: 60,
+  compoundingWeight: 0.45,
+  maxCombinedReductionPct: 72,
+  chartMinScale: 20,
+  chartMinBarWidthPct: 6,
+  chartSvgBarMaxWidth: 290,
+} as const;
+
+/** Scoring and cache bucket parameters for pre-stored FAQ matching. */
+export const FAQ_MATCHER_CONFIG = {
+  defaultThreshold: 0.48,
+  minTokenLength: 2,
+  minPrefixFuzzyLength: 4,
+  suggestedChipMin: 6,
+  suggestedChipDefault: 7,
+  suggestedChipMax: 8,
+  aqiBucketSize: 25,
+  highSmogAqiThreshold: 150,
+  moderateSmogAqiThreshold: 100,
+  phraseKeywordMinLength: 4,
+  phraseExactBonus: 0.35,
+  wordBonus: 0.16,
+  bothTokenWeight: 1.25,
+  keywordWeight: 1.0,
+  questionWeight: 0.9,
+  fuzzyWeight: 0.65,
+  diceThreshold: 0.82,
+  coverageWeight: 0.68,
+  maxPhraseBonus: 0.45,
+  diceWeight: 0.25,
+} as const;
+
+/** English stopwords stripped before FAQ keyword scoring and cache-key normalization. */
+export const STOPWORDS = new Set<string>([
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'but',
+  'by',
+  'can',
+  'could',
+  'do',
+  'does',
+  'for',
+  'from',
+  'have',
+  'how',
+  'i',
+  'if',
+  'in',
+  'into',
+  'is',
+  'it',
+  'its',
+  'me',
+  'my',
+  'of',
+  'on',
+  'or',
+  'our',
+  'please',
+  'should',
+  'so',
+  'tell',
+  'that',
+  'the',
+  'their',
+  'them',
+  'there',
+  'these',
+  'they',
+  'this',
+  'to',
+  'today',
+  'us',
+  'vs',
+  'was',
+  'we',
+  'what',
+  'when',
+  'where',
+  'which',
+  'who',
+  'why',
+  'will',
+  'with',
+  'would',
+  'you',
+  'your',
+]);
 
 /** Color-blind-safe AQI category metadata pairing color, icon, range, and guidance. */
 export const AQI_CATEGORIES: Record<AqiCategoryId, AqiCategoryMeta> = {

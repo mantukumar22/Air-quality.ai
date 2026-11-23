@@ -1,27 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { formatGeminiApiError, generateTailoredRecommendations } from '@/lib/gemini';
-import { getClientIp, recommendRateLimiter } from '@/lib/rateLimit';
+/**
+ * @fileoverview Tailored winter-smog action plan route handler (`POST /api/recommend`)
+ * validating household input via Zod and returning structured Gemini JSON plans.
+ */
+
+import { type NextRequest, NextResponse } from 'next/server';
+import { toErrorResponse } from '@/lib/apiResponse';
+import { AppError, formatUpstreamAiError } from '@/lib/errors';
+import { generateTailoredRecommendations } from '@/lib/gemini';
+import { getClientIp, getRetryAfterSeconds, recommendRateLimiter } from '@/lib/rateLimit';
 import { recommendRequestSchema } from '@/lib/schemas';
 
 /**
- * POST /api/recommend
- * Generates structured, Zod-validated winter-smog and indoor air recommendations via Gemini.
+ * Handles `POST /api/recommend` to generate a household-tailored recommendation plan.
+ *
+ * @param request - Incoming Next.js POST request containing `profile` and `aqi`.
+ * @returns JSON `{ plan }` on success or a standardized summary error payload.
  */
-export async function POST(request: NextRequest) {
-  const clientIp = getClientIp(request);
-  const rate = recommendRateLimiter.check(clientIp);
-
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const rate = recommendRateLimiter.check(getClientIp(request));
   if (!rate.allowed) {
-    const message = 'Rate limit exceeded for plan generation. Please wait a minute and retry.';
-    return NextResponse.json(
-      {
-        error: message,
-        errorDetail: { code: 'RATE_LIMITED', message, retryable: true },
-      },
-      {
-        status: 429,
-        headers: { 'Retry-After': String(Math.ceil((rate.resetAt - Date.now()) / 1000)) },
-      }
+    return toErrorResponse(
+      new AppError(
+        'Rate limit exceeded for plan generation. Please wait a minute and retry.',
+        429,
+        true,
+        'RATE_LIMITED',
+        { 'Retry-After': getRetryAfterSeconds(rate.resetAt) }
+      ),
+      { format: 'summary' }
     );
   }
 
@@ -29,25 +35,21 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    const message = 'Invalid JSON request body.';
-    return NextResponse.json(
-      {
-        error: message,
-        errorDetail: { code: 'INVALID_JSON', message, retryable: false },
-      },
-      { status: 400 }
-    );
+    return toErrorResponse(new AppError('Invalid JSON request body.', 400, false, 'INVALID_JSON'), {
+      format: 'summary',
+    });
   }
 
   const parsed = recommendRequestSchema.safeParse(body);
   if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message ?? 'Invalid household profile or AQI context.';
-    return NextResponse.json(
-      {
-        error: message,
-        errorDetail: { code: 'INVALID_REQUEST', message, retryable: false },
-      },
-      { status: 400 }
+    return toErrorResponse(
+      new AppError(
+        parsed.error.issues[0]?.message ?? 'Invalid household profile or AQI context.',
+        400,
+        false,
+        'INVALID_REQUEST'
+      ),
+      { format: 'summary' }
     );
   }
 
@@ -55,18 +57,12 @@ export async function POST(request: NextRequest) {
     const plan = await generateTailoredRecommendations(parsed.data.profile, parsed.data.aqi);
     return NextResponse.json({ plan }, { status: 200 });
   } catch (err) {
-    const formatted = formatGeminiApiError(err);
+    const formatted = formatUpstreamAiError(err);
     console.error('[api/recommend] Upstream AI error:', {
       code: formatted.code,
       statusCode: formatted.statusCode,
       message: formatted.message,
     });
-    return NextResponse.json(
-      {
-        error: formatted.message,
-        errorDetail: formatted.toErrorDetail(),
-      },
-      { status: formatted.statusCode }
-    );
+    return toErrorResponse(formatted, { format: 'summary' });
   }
 }

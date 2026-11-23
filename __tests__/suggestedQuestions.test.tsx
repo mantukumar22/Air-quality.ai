@@ -110,7 +110,10 @@ describe('SuggestedQuestions & Resilient ChatPanel', () => {
     ).toBeInTheDocument();
 
     const retryButtons = screen.getAllByRole('button', { name: /Try again/i });
-    await user.click(retryButtons[0]);
+    const firstRetry = retryButtons[0];
+    expect(firstRetry).toBeDefined();
+    if (!firstRetry) throw new Error('Expected Try again button');
+    await user.click(firstRetry);
 
     await waitFor(() => {
       expect(screen.getByText(/Fresh AI response after retry\./i)).toBeInTheDocument();

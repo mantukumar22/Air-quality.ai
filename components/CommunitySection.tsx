@@ -1,10 +1,16 @@
+/**
+ * @fileoverview Deep emerald neighborhood mode displaying collective winter-smog
+ * actions and a copy-ready neighbor summary card.
+ */
+
 'use client';
 
-import { useState } from 'react';
 import { Check, CheckSquare, Copy, Share2, Square, Users } from 'lucide-react';
+import { useState } from 'react';
+import { UI_TIMING_MS } from '@/lib/constants';
 import type { RecommendationItem } from '@/types/airwise';
 
-interface CommunitySectionProps {
+export interface CommunitySectionProps {
   communityActions: RecommendationItem[];
   neighborShareSummary: string;
   checkedIds: string[];
@@ -13,7 +19,10 @@ interface CommunitySectionProps {
 
 /**
  * Neighborhood & family mode styled as the deep emerald community band
- * with soft mint-cream cards for collective smog actions and neighbor sharing.
+ * with Liquid Glass cards for collective smog actions and neighbor sharing.
+ *
+ * @param props - Community action items, summary text, checklist IDs, and toggle handler.
+ * @returns Community action section element.
  */
 export function CommunitySection({
   communityActions,
@@ -33,7 +42,7 @@ export function CommunitySection({
         throw new Error('Clipboard API unavailable');
       }
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setTimeout(() => setCopied(false), UI_TIMING_MS.copyFeedbackDurationMs);
     } catch {
       setCopyError('Select and copy the summary text manually in this browser.');
     }
@@ -62,7 +71,6 @@ export function CommunitySection({
       </div>
 
       <div className="mt-7 grid gap-5 lg:grid-cols-12">
-        {/* Community Action Cards */}
         <div className="lg:col-span-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
           {communityActions.map((item) => {
             const checked = checkedIds.includes(item.id);
@@ -115,7 +123,6 @@ export function CommunitySection({
           })}
         </div>
 
-        {/* Shareable Neighbor Summary Card */}
         <div className="liquid-glass-card-iridescent lg:col-span-5 flex flex-col justify-between rounded-3xl p-5 text-slate-900 dark:text-slate-100">
           <div>
             <div className="flex items-center gap-2 text-sm font-bold text-[#123D2B] dark:text-white">

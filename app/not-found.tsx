@@ -1,8 +1,14 @@
-import Link from 'next/link';
+/**
+ * @fileoverview Accessible 404 Not Found boundary page matching the AirWise liquid-glass theme.
+ */
+
 import { ArrowLeft, Wind } from 'lucide-react';
+import Link from 'next/link';
 
 /**
  * Accessible App Router 404 page matching the AirWise sky aesthetic.
+ *
+ * @returns Not Found fallback landmark with link back to the dashboard.
  */
 export default function NotFoundPage() {
   return (

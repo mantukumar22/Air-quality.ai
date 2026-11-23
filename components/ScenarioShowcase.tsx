@@ -1,19 +1,24 @@
+/**
+ * @fileoverview Deep lush forest band showcasing four illustrated winter-smog
+ * playbooks with interactive spotlight navigation.
+ */
+
 'use client';
 
-import { useState } from 'react';
 import { ArrowRight, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { RecommendationFilterTab } from '@/components/RecommendationList';
+import { useState } from 'react';
 import { SmartImage } from '@/components/SmartImage';
 import cleanKitchenImg from '@/src/assets/images/clean_kitchen_exhaust_1794986285119.jpg';
 import diyHepaRoomImg from '@/src/assets/images/diy_hepa_filter_room_1794986285578.jpg';
 import indoorSanctuaryImg from '@/src/assets/images/indoor_sanctuary_living_1794986284632.jpg';
 import winterMorningImg from '@/src/assets/images/winter_smog_morning_1794986284807.jpg';
+import type { RecommendationFilterTab } from '@/types/airwise';
 
-interface ScenarioShowcaseProps {
+export interface ScenarioShowcaseProps {
   onSelectCategory: (tab: RecommendationFilterTab) => void;
 }
 
-const SCENARIO_CARDS: Array<{
+const SCENARIO_CARDS: ReadonlyArray<{
   id: string;
   title: string;
   windowLabel: string;
@@ -61,8 +66,11 @@ const SCENARIO_CARDS: Array<{
 ];
 
 /**
- * Deep lush forest band showcasing the 4 illustrated winter-smog playbooks
- * with interactive prev/next spotlight controls matching the reference UI's dark canopy band.
+ * Showcases four illustrated winter-smog playbooks with prev/next spotlight controls
+ * that route directly to filtered checklist categories.
+ *
+ * @param props - Callback selecting the corresponding checklist filter tab.
+ * @returns Playbook showcase band element.
  */
 export function ScenarioShowcase({ onSelectCategory }: ScenarioShowcaseProps) {
   const [spotlightIndex, setSpotlightIndex] = useState(0);

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview In-memory fixed-window per-IP rate limiter protecting AirWise API routes.
+ */
+
 import { RATE_LIMITS } from '@/lib/constants';
 
 export interface RateLimitResult {
@@ -26,6 +30,10 @@ export class RateLimiter {
 
   /**
    * Checks and consumes one request token for the given key (e.g., client IP).
+   *
+   * @param key - Normalized rate-limit bucket key (typically client IP).
+   * @param now - Current epoch timestamp in milliseconds.
+   * @returns Quota allowance status, remaining tokens, and window reset timestamp.
    */
   check(key: string, now = Date.now()): RateLimitResult {
     this.pruneExpired(now);
@@ -59,13 +67,13 @@ export class RateLimiter {
     };
   }
 
-  /** Resets all stored rate-limit buckets (useful in tests). */
+  /** Resets all stored rate-limit buckets (used for isolated test suites). */
   reset(): void {
     this.store.clear();
   }
 
   private pruneExpired(now: number): void {
-    if (this.store.size < 500) {
+    if (this.store.size < RATE_LIMITS.pruneStoreThreshold) {
       return;
     }
     for (const [key, entry] of this.store.entries()) {
@@ -85,6 +93,9 @@ export const chatRateLimiter = new RateLimiter(RATE_LIMITS.chat.limit, RATE_LIMI
 
 /**
  * Extracts a normalized client IP address from incoming request headers.
+ *
+ * @param request - Incoming Next.js or Web Request object.
+ * @returns Best-effort client IP string defaulting to `'127.0.0.1'`.
  */
 export function getClientIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -99,4 +110,15 @@ export function getClientIp(request: Request): string {
     return realIp;
   }
   return '127.0.0.1';
+}
+
+/**
+ * Formats an HTTP `Retry-After` seconds header value from a rate-limit reset timestamp.
+ *
+ * @param resetAt - Window expiration epoch timestamp in milliseconds.
+ * @param now - Current epoch timestamp in milliseconds.
+ * @returns Minimum 1-second stringified delay for the `Retry-After` response header.
+ */
+export function getRetryAfterSeconds(resetAt: number, now = Date.now()): string {
+  return String(Math.max(1, Math.ceil((resetAt - now) / 1000)));
 }

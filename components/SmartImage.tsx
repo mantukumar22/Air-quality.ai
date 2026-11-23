@@ -1,10 +1,14 @@
+/**
+ * @fileoverview Resilient Next.js Image wrapper with referrer safety and SVG fallback UI.
+ */
+
 'use client';
 
+import { Wind } from 'lucide-react';
 import Image, { type StaticImageData } from 'next/image';
 import { useState } from 'react';
-import { Wind } from 'lucide-react';
 
-interface SmartImageProps {
+export interface SmartImageProps {
   src: StaticImageData | string;
   alt: string;
   className?: string;
@@ -13,8 +17,11 @@ interface SmartImageProps {
 }
 
 /**
- * Resilient Next.js Image wrapper with referrerPolicy="no-referrer" and
- * a clean styled CSS/SVG fallback container if an asset fails to load.
+ * Resilient Next.js `Image` wrapper setting `referrerPolicy="no-referrer"` and
+ * rendering a styled accessible fallback container if an image fails to load.
+ *
+ * @param props - Image source, alt text, optional sizing, and priority flags.
+ * @returns Rendered `Image` or accessible fallback container.
  */
 export function SmartImage({
   src,

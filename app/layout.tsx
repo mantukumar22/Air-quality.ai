@@ -1,5 +1,11 @@
+/**
+ * @fileoverview Root Next.js App Router layout configuring typography fonts,
+ * OpenGraph/Twitter metadata, theme surface, and the skip-to-content link.
+ */
+
 import type { Metadata } from 'next';
 import { DM_Sans, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
+import type { ReactNode } from 'react';
 import './globals.css';
 
 const jakarta = Plus_Jakarta_Sans({
@@ -23,6 +29,7 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
+/** Application metadata and social preview tags for AirWise. */
 export const metadata: Metadata = {
   title: 'AirWise: Urban Air Quality Assistant',
   description:
@@ -48,7 +55,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Root layout wrapping every page with AirWise fonts and accessibility landmarks.
+ *
+ * @param props - Children route tree rendered inside `<body>`.
+ * @returns Top-level `<html>` document shell.
+ */
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"

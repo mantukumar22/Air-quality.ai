@@ -1,9 +1,19 @@
+/**
+ * @fileoverview Hydration-safe dark/light mode hook synchronized with Tailwind's
+ * `.dark` root class and `localStorage`.
+ */
+
 'use client';
 
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { STORAGE_KEYS } from '@/lib/constants';
 
 export type ThemeMode = 'light' | 'dark';
+
+export interface UseThemeResult {
+  theme: ThemeMode;
+  toggleTheme: () => void;
+}
 
 const THEME_CHANGE_EVENT = 'airwise-theme-change';
 
@@ -36,9 +46,11 @@ function getThemeServerSnapshot(): ThemeMode {
 }
 
 /**
- * Manages light/dark mode preference synced with Tailwind's .dark class.
+ * Manages light/dark mode preference synced with Tailwind's `.dark` root class.
+ *
+ * @returns Active `theme` mode and `toggleTheme` callback.
  */
-export function useTheme() {
+export function useTheme(): UseThemeResult {
   const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getThemeServerSnapshot);
 
   useEffect(() => {
@@ -52,7 +64,7 @@ export function useTheme() {
       window.localStorage.setItem(STORAGE_KEYS.theme, next);
       window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
     } catch {
-      // Ignore storage errors
+      // Non-fatal: ignore storage write errors
     }
   }, []);
 

@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "validate": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "clean": "next clean"
   },
   "dependencies": {

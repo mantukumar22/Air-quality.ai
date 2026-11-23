@@ -1,9 +1,13 @@
+/**
+ * @fileoverview Root App Router error boundary with automatic single-shot recovery
+ * when a lazy webpack chunk times out or becomes stale after deployment.
+ */
+
 'use client';
 
-import { useEffect } from 'react';
 import { AlertTriangle, RotateCw } from 'lucide-react';
-
-const CHUNK_RELOAD_KEY = 'airwise_chunk_reload_once';
+import { useEffect } from 'react';
+import { STORAGE_KEYS } from '@/lib/constants';
 
 function isChunkLoadError(error: Error): boolean {
   const text = `${error.name} ${error.message}`.toLowerCase();
@@ -17,6 +21,9 @@ function isChunkLoadError(error: Error): boolean {
 /**
  * Root App Router error boundary with automatic single-shot recovery
  * for stale or timed-out Next.js chunks.
+ *
+ * @param props - Caught runtime error and Next.js reset callback.
+ * @returns Accessible liquid-glass error fallback screen.
  */
 export default function AppErrorBoundary({
   error,
@@ -28,21 +35,21 @@ export default function AppErrorBoundary({
   useEffect(() => {
     if (!isChunkLoadError(error)) return;
     try {
-      const alreadyReloaded = window.sessionStorage.getItem(CHUNK_RELOAD_KEY);
+      const alreadyReloaded = window.sessionStorage.getItem(STORAGE_KEYS.chunkReloadOnce);
       if (!alreadyReloaded) {
-        window.sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+        window.sessionStorage.setItem(STORAGE_KEYS.chunkReloadOnce, '1');
         window.location.reload();
       }
     } catch {
-      // Ignore storage failures
+      // Non-fatal: sessionStorage may be blocked in strict privacy contexts
     }
   }, [error]);
 
   const handleRetry = () => {
     try {
-      window.sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+      window.sessionStorage.removeItem(STORAGE_KEYS.chunkReloadOnce);
     } catch {
-      // Ignore storage failures
+      // Non-fatal: ignore storage errors during retry cleanup
     }
     if (isChunkLoadError(error)) {
       window.location.reload();

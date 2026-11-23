@@ -1,7 +1,15 @@
+/**
+ * @fileoverview Profile- and AQI-prioritized suggested question chip group providing
+ * instant stored FAQ answers with zero API calls via `useTypingReveal`.
+ */
+
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Zap } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useTypingReveal } from '@/hooks/useTypingReveal';
+import { toAqiContextInput } from '@/lib/apiClient';
+import { FAQ_MATCHER_CONFIG, TYPING_REVEAL_CONFIG } from '@/lib/constants';
 import { getSuggestedFaqEntries, personalizeFaqAnswer } from '@/lib/faqMatcher';
 import type { AqiReading, FaqEntry, UserProfile } from '@/types/airwise';
 
@@ -16,7 +24,10 @@ export interface SuggestedQuestionsProps {
 /**
  * Renders 6 to 8 profile- and AQI-prioritized question chips above the chat input.
  * Clicking any chip displays a stored, personalized answer immediately with zero API calls
- * and respects prefers-reduced-motion during the short reveal animation.
+ * and respects `prefers-reduced-motion` via `useTypingReveal`.
+ *
+ * @param props - Household profile, AQI reading, disabled flag, and selection callback.
+ * @returns Suggested question chip group with optional inline answer preview.
  */
 export function SuggestedQuestions({
   profile,
@@ -26,66 +37,27 @@ export function SuggestedQuestions({
   onSelectSuggestion,
 }: SuggestedQuestionsProps) {
   const suggestions = useMemo(
-    () => getSuggestedFaqEntries(profile, aqi.usAqi, 7),
+    () => getSuggestedFaqEntries(profile, aqi.usAqi, FAQ_MATCHER_CONFIG.suggestedChipDefault),
     [profile, aqi.usAqi]
   );
 
   const [activeEntry, setActiveEntry] = useState<FaqEntry | null>(null);
   const [fullAnswer, setFullAnswer] = useState('');
   const [visibleAnswer, setVisibleAnswer] = useState('');
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
-
-  const startTypingReveal = (text: string) => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (prefersReducedMotion) {
-      setVisibleAnswer(text);
-      return;
-    }
-
-    let cursor = Math.min(28, text.length);
-    setVisibleAnswer(text.slice(0, cursor));
-
-    timerRef.current = setInterval(() => {
-      cursor = Math.min(text.length, cursor + 28);
-      setVisibleAnswer(text.slice(0, cursor));
-      if (cursor >= text.length && timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }, 16);
-  };
+  const { startReveal } = useTypingReveal({
+    chunkSizeChars: TYPING_REVEAL_CONFIG.chipChunkSizeChars,
+    intervalMs: TYPING_REVEAL_CONFIG.intervalMs,
+  });
 
   const handleSelect = (entry: FaqEntry) => {
     if (disabled) return;
-    const personalized = personalizeFaqAnswer(entry, profile, {
-      locationName: aqi.locationName,
-      usAqi: aqi.usAqi,
-      pm25: aqi.pm25,
-      categoryLabel: aqi.category.label,
-    });
+    const personalized = personalizeFaqAnswer(entry, profile, toAqiContextInput(aqi));
 
     setActiveEntry(entry);
     setFullAnswer(personalized);
 
     if (showInlineAnswer) {
-      startTypingReveal(personalized);
+      startReveal(personalized, setVisibleAnswer);
     }
 
     onSelectSuggestion?.(entry, personalized);

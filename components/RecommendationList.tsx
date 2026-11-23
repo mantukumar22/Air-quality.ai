@@ -1,12 +1,21 @@
+/**
+ * @fileoverview Interactive recommendation checklist panel organized by daily routine,
+ * indoor hacks, sustainable swaps, and vulnerable-household precautions.
+ */
+
 'use client';
 
-import { memo, useMemo, useState } from 'react';
 import { AlertTriangle, CheckSquare, RotateCcw, Square } from 'lucide-react';
-import type { RecommendationItem, RecommendationPlan } from '@/types/airwise';
+import { memo, useMemo, useState } from 'react';
+import type {
+  RecommendationFilterTab,
+  RecommendationItem,
+  RecommendationPlan,
+} from '@/types/airwise';
 
-export type RecommendationFilterTab = 'all' | 'routine' | 'indoor' | 'sustainable' | 'vulnerable';
+export type { RecommendationFilterTab };
 
-interface RecommendationListProps {
+export interface RecommendationListProps {
   plan: RecommendationPlan;
   isGenerating: boolean;
   error: string | null;
@@ -17,7 +26,7 @@ interface RecommendationListProps {
   onResetChecklist: () => void;
 }
 
-const FILTER_TABS: Array<{ id: RecommendationFilterTab; label: string }> = [
+const FILTER_TABS: ReadonlyArray<{ id: RecommendationFilterTab; label: string }> = [
   { id: 'all', label: 'All Actions' },
   { id: 'routine', label: 'Daily Routine' },
   { id: 'indoor', label: 'Indoor Hacks' },
@@ -105,6 +114,9 @@ function RecommendationRow({
 /**
  * Displays structured daily routine, indoor hacks, sustainable alternatives,
  * and vulnerable-group precautions with persistent checklist controls.
+ *
+ * @param props - Active recommendation plan, checklist state, tab state, and handlers.
+ * @returns Accessible filterable checklist section.
  */
 export const RecommendationList = memo(function RecommendationList({
   plan,
@@ -209,7 +221,6 @@ export const RecommendationList = memo(function RecommendationList({
         </div>
       )}
 
-      {/* Segmented Liquid Glass filter tabs */}
       <div
         role="tablist"
         aria-label="Filter action plan categories"

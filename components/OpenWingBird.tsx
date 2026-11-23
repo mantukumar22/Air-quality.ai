@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Pure-CSS open-winged flying bird silhouette component used in the
+ * AirWise sky backdrop and header brand badge.
+ */
+
 'use client';
 
 interface OpenWingBirdProps {
@@ -29,7 +34,11 @@ const SIZE_CLASSES: Record<
 };
 
 /**
- * Pure-CSS open-winged flying bird silhouette with hydration-safe wing-flapping keyframes.
+ * Renders a pure-CSS open-winged flying bird silhouette with hydration-safe
+ * wing-flapping keyframes.
+ *
+ * @param props - Size variant, animation toggle, flap duration class, and custom classes.
+ * @returns Decorative bird silhouette element.
  */
 export function OpenWingBird({
   size = 'md',

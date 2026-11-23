@@ -1,82 +1,29 @@
-import { CHAT_CACHE_CONFIG } from '@/lib/constants';
+/**
+ * @fileoverview Deterministic FAQ normalization, similarity matching, household
+ * personalization, offline fallback synthesis, and bounded TTL answer caching.
+ */
+
+import { CHAT_CACHE_CONFIG, FAQ_MATCHER_CONFIG, INPUT_LIMITS, STOPWORDS } from '@/lib/constants';
 import { FAQ_ENTRIES } from '@/lib/faq';
 import { sanitizeText } from '@/lib/sanitize';
-import type { AqiContextInput } from '@/lib/gemini';
-import type { FaqEntry, UserProfile } from '@/types/airwise';
-
-const STOPWORDS = new Set([
-  'a',
-  'an',
-  'and',
-  'are',
-  'as',
-  'at',
-  'be',
-  'but',
-  'by',
-  'can',
-  'could',
-  'do',
-  'does',
-  'for',
-  'from',
-  'have',
-  'how',
-  'i',
-  'if',
-  'in',
-  'into',
-  'is',
-  'it',
-  'its',
-  'me',
-  'my',
-  'of',
-  'on',
-  'or',
-  'our',
-  'please',
-  'should',
-  'so',
-  'tell',
-  'that',
-  'the',
-  'their',
-  'them',
-  'there',
-  'these',
-  'they',
-  'this',
-  'to',
-  'today',
-  'us',
-  'vs',
-  'was',
-  'we',
-  'what',
-  'when',
-  'where',
-  'which',
-  'who',
-  'why',
-  'will',
-  'with',
-  'would',
-  'you',
-  'your',
-]);
+import type { AqiContextInput, FaqEntry, UserProfile } from '@/types/airwise';
 
 export interface FaqMatchResult {
   entry: FaqEntry;
   score: number;
 }
 
+type AqiSnapshot = Pick<AqiContextInput, 'locationName' | 'usAqi' | 'pm25' | 'categoryLabel'>;
+
 /**
  * Normalizes a user question by lowercasing, stripping punctuation,
- * collapsing whitespace, and removing stopwords.
+ * collapsing whitespace, and removing English stopwords.
+ *
+ * @param input - Raw user question string.
+ * @returns Normalized space-delimited token phrase.
  */
 export function normalizeQuestion(input: string): string {
-  const cleaned = sanitizeText(input, 600)
+  const cleaned = sanitizeText(input, INPUT_LIMITS.chatMessageMaxLength)
     .toLowerCase()
     .replace(/['’]/g, '')
     .replace(/[^a-z0-9.\s-]+/g, ' ')
@@ -92,12 +39,17 @@ export function normalizeQuestion(input: string): string {
 }
 
 /**
- * Splits a question into normalized content tokens (minimum length 2).
+ * Splits a question into normalized unique content tokens of at least 2 characters.
+ *
+ * @param input - Raw question or keyword phrase.
+ * @returns Deduplicated token array.
  */
 export function tokenizeQuestion(input: string): string[] {
   const normalized = normalizeQuestion(input);
   if (!normalized) return [];
-  return Array.from(new Set(normalized.split(' ').filter((t) => t.length >= 2)));
+  return Array.from(
+    new Set(normalized.split(' ').filter((t) => t.length >= FAQ_MATCHER_CONFIG.minTokenLength))
+  );
 }
 
 function diceSimilarity(a: string, b: string): number {
@@ -123,7 +75,57 @@ function diceSimilarity(a: string, b: string): number {
   return (2 * overlap) / (a.length + b.length - 2);
 }
 
-function scoreEntry(rawNormalizedFull: string, tokens: string[], entry: FaqEntry): number {
+function extractKeywordSignals(
+  rawNormalizedFull: string,
+  keywords: readonly string[]
+): { keywordTokens: Set<string>; phraseBonus: number } {
+  const keywordTokens = new Set<string>();
+  let phraseBonus = 0;
+
+  for (const kw of keywords) {
+    const kwNorm = kw.toLowerCase().trim();
+    if (
+      rawNormalizedFull.includes(kwNorm) &&
+      kwNorm.length >= FAQ_MATCHER_CONFIG.phraseKeywordMinLength
+    ) {
+      phraseBonus += kwNorm.includes(' ')
+        ? FAQ_MATCHER_CONFIG.phraseExactBonus
+        : FAQ_MATCHER_CONFIG.wordBonus;
+    }
+    for (const part of tokenizeQuestion(kwNorm)) {
+      keywordTokens.add(part);
+    }
+  }
+
+  return { keywordTokens, phraseBonus };
+}
+
+function scoreSingleToken(
+  token: string,
+  keywordTokens: ReadonlySet<string>,
+  questionTokens: ReadonlySet<string>
+): number {
+  const inKeywords = keywordTokens.has(token);
+  const inQuestion = questionTokens.has(token);
+
+  if (inKeywords && inQuestion) return FAQ_MATCHER_CONFIG.bothTokenWeight;
+  if (inKeywords) return FAQ_MATCHER_CONFIG.keywordWeight;
+  if (inQuestion) return FAQ_MATCHER_CONFIG.questionWeight;
+
+  // Soft fuzzy fallback for plurals and minor spelling variations (e.g. purifiers vs purifier)
+  for (const kwToken of keywordTokens) {
+    const isPrefixMatch =
+      token.length >= FAQ_MATCHER_CONFIG.minPrefixFuzzyLength &&
+      kwToken.startsWith(token.slice(0, FAQ_MATCHER_CONFIG.minPrefixFuzzyLength));
+    if (isPrefixMatch || diceSimilarity(token, kwToken) >= FAQ_MATCHER_CONFIG.diceThreshold) {
+      return FAQ_MATCHER_CONFIG.fuzzyWeight;
+    }
+  }
+
+  return 0;
+}
+
+function scoreEntry(rawNormalizedFull: string, tokens: readonly string[], entry: FaqEntry): number {
   if (tokens.length === 0) return 0;
 
   const entryQuestionNorm = normalizeQuestion(entry.question);
@@ -131,54 +133,37 @@ function scoreEntry(rawNormalizedFull: string, tokens: string[], entry: FaqEntry
     return 1;
   }
 
-  const entryKeywordTokens = new Set<string>();
-  let phraseBonus = 0;
-
-  for (const kw of entry.keywords) {
-    const kwNorm = kw.toLowerCase().trim();
-    if (rawNormalizedFull.includes(kwNorm) && kwNorm.length >= 4) {
-      phraseBonus += kwNorm.includes(' ') ? 0.35 : 0.16;
-    }
-    for (const part of tokenizeQuestion(kwNorm)) {
-      entryKeywordTokens.add(part);
-    }
-  }
-
+  const { keywordTokens, phraseBonus } = extractKeywordSignals(rawNormalizedFull, entry.keywords);
   const questionTokens = new Set(tokenizeQuestion(entry.question));
 
   let matchedWeight = 0;
   for (const token of tokens) {
-    if (entryKeywordTokens.has(token) && questionTokens.has(token)) {
-      matchedWeight += 1.25;
-    } else if (entryKeywordTokens.has(token)) {
-      matchedWeight += 1.0;
-    } else if (questionTokens.has(token)) {
-      matchedWeight += 0.9;
-    } else {
-      // Soft fuzzy check for plurals / slight typos (e.g. purifiers vs purifier)
-      for (const kwToken of entryKeywordTokens) {
-        if (
-          (token.length >= 4 && kwToken.startsWith(token.slice(0, 4))) ||
-          diceSimilarity(token, kwToken) >= 0.82
-        ) {
-          matchedWeight += 0.65;
-          break;
-        }
-      }
-    }
+    matchedWeight += scoreSingleToken(token, keywordTokens, questionTokens);
   }
 
   const tokenCoverage = matchedWeight / Math.max(tokens.length, 2);
   const questionDice = diceSimilarity(rawNormalizedFull, entryQuestionNorm);
 
-  return Math.min(1, tokenCoverage * 0.68 + Math.min(0.45, phraseBonus) + questionDice * 0.25);
+  return Math.min(
+    1,
+    tokenCoverage * FAQ_MATCHER_CONFIG.coverageWeight +
+      Math.min(FAQ_MATCHER_CONFIG.maxPhraseBonus, phraseBonus) +
+      questionDice * FAQ_MATCHER_CONFIG.diceWeight
+  );
 }
 
 /**
- * Matches a typed user question against pre-stored FAQ_ENTRIES using keyword overlap
+ * Matches a typed user question against pre-stored `FAQ_ENTRIES` using keyword overlap
  * and token similarity. Returns the best match only when score meets threshold.
+ *
+ * @param query - Raw user message text.
+ * @param threshold - Minimum normalized similarity score (0–1) required to match.
+ * @returns Top matching `FaqMatchResult`, or `null` when below threshold.
  */
-export function matchFaqQuestion(query: string, threshold = 0.48): FaqMatchResult | null {
+export function matchFaqQuestion(
+  query: string,
+  threshold = FAQ_MATCHER_CONFIG.defaultThreshold
+): FaqMatchResult | null {
   const normalizedFull = normalizeQuestion(query);
   const tokens = tokenizeQuestion(query);
   if (tokens.length === 0) return null;
@@ -198,36 +183,55 @@ export function matchFaqQuestion(query: string, threshold = 0.48): FaqMatchResul
   return best;
 }
 
+function buildGroupContextNote(
+  groups: readonly UserProfile['householdGroups'][number][]
+): string | null {
+  if (groups.includes('respiratory')) {
+    return 'keep asthma medications handy and run continuous bedroom filtration';
+  }
+  if (groups.includes('kids')) {
+    return 'keep children indoors during early morning inversion hours';
+  }
+  if (groups.includes('elderly')) {
+    return 'schedule walks for older adults only around 1:00–3:30 PM';
+  }
+  if (groups.includes('pets')) {
+    return 'keep pet walks brief and wipe paws/fur afterward';
+  }
+  return null;
+}
+
 /**
  * Appends one personalized context line tailored to the user's live AQI and household profile.
+ *
+ * @param entry - Matched pre-stored FAQ entry.
+ * @param profile - Household sensitivity groups and budget tier.
+ * @param aqi - Current neighborhood AQI snapshot.
+ * @returns Sanitized answer with localized AQI context appended.
  */
 export function personalizeFaqAnswer(
   entry: FaqEntry,
   profile: UserProfile,
-  aqi: Pick<AqiContextInput, 'locationName' | 'usAqi' | 'pm25' | 'categoryLabel'>
+  aqi: AqiSnapshot
 ): string {
   const safeLocation = sanitizeText(aqi.locationName || profile.city || 'your area', 80);
-  const safeCategory = sanitizeText(aqi.categoryLabel || 'Elevated', 60);
+  const safeCategory = sanitizeText(
+    aqi.categoryLabel || 'Elevated',
+    INPUT_LIMITS.categoryLabelMaxLength
+  );
 
-  const notes: string[] = [];
-  if (aqi.usAqi > 150) {
-    notes.push('keep windows sealed until mid-afternoon and wear a fitted N95 outdoors');
-  } else if (aqi.usAqi > 100) {
-    notes.push('limit prolonged outdoor exertion during morning and evening rush hours');
-  } else {
-    notes.push('take advantage of cleaner daylight hours to briefly cross-ventilate');
+  const aqiGuidance =
+    aqi.usAqi > FAQ_MATCHER_CONFIG.highSmogAqiThreshold
+      ? 'keep windows sealed until mid-afternoon and wear a fitted N95 outdoors'
+      : aqi.usAqi > FAQ_MATCHER_CONFIG.moderateSmogAqiThreshold
+        ? 'limit prolonged outdoor exertion during morning and evening rush hours'
+        : 'take advantage of cleaner daylight hours to briefly cross-ventilate';
+
+  const notes: string[] = [aqiGuidance];
+  const groupNote = buildGroupContextNote(profile.householdGroups);
+  if (groupNote) {
+    notes.push(groupNote);
   }
-
-  if (profile.householdGroups.includes('respiratory')) {
-    notes.push('keep asthma medications handy and run continuous bedroom filtration');
-  } else if (profile.householdGroups.includes('kids')) {
-    notes.push('keep children indoors during early morning inversion hours');
-  } else if (profile.householdGroups.includes('elderly')) {
-    notes.push('schedule walks for older adults only around 1:00–3:30 PM');
-  } else if (profile.householdGroups.includes('pets')) {
-    notes.push('keep pet walks brief and wipe paws/fur afterward');
-  }
-
   if (profile.budget === 'low') {
     notes.push('prioritize zero-cost timing and DIY sealing');
   }
@@ -239,14 +243,22 @@ export function personalizeFaqAnswer(
 /**
  * Builds a deterministic offline fallback guide answer when Gemini is unreachable
  * or circuit-broken and no FAQ entry directly matched.
+ *
+ * @param query - User's custom question text.
+ * @param profile - Household setup and budget tier.
+ * @param aqi - Live neighborhood AQI snapshot.
+ * @returns Multi-paragraph plain-text winter-smog guide response.
  */
 export function buildOfflineFallbackAnswer(
   query: string,
   profile: UserProfile,
-  aqi: Pick<AqiContextInput, 'locationName' | 'usAqi' | 'pm25' | 'categoryLabel'>
+  aqi: AqiSnapshot
 ): string {
   const safeLocation = sanitizeText(aqi.locationName || profile.city || 'your area', 80);
-  const safeCategory = sanitizeText(aqi.categoryLabel || 'Elevated', 60);
+  const safeCategory = sanitizeText(
+    aqi.categoryLabel || 'Elevated',
+    INPUT_LIMITS.categoryLabelMaxLength
+  );
   const safeQuery = sanitizeText(query, 120);
 
   const sensitiveLine =
@@ -260,7 +272,7 @@ export function buildOfflineFallbackAnswer(
       : 'Run your HEPA purifier continuously on medium-high and keep kitchen exhaust fans running while cooking (estimate: 35–50% lower indoor PM2.5).';
 
   const outdoorTip =
-    aqi.usAqi > 150
+    aqi.usAqi > FAQ_MATCHER_CONFIG.highSmogAqiThreshold
       ? 'Stay indoors during 6:00–10:30 AM and post-sunset peaks; wear a snug N95/FFP2 respirator outdoors and ventilate only briefly around 1:00–3:30 PM if outdoor haze clears.'
       : 'Keep outdoor errands timed for mid-afternoon (1:00–3:30 PM) when dispersion peaks and keep a fitted N95 handy near busy roads.';
 
@@ -272,73 +284,90 @@ export function buildOfflineFallbackAnswer(
   ].join('\n\n');
 }
 
+function scoreSuggestedFaq(entry: FaqEntry, profile: UserProfile, usAqi: number): number {
+  let priority = 0;
+  const groups = profile.householdGroups;
+
+  if (
+    groups.includes('respiratory') &&
+    (entry.id === 'faq-elderly-asthma' || entry.id === 'faq-see-doctor')
+  ) {
+    priority += 5;
+  }
+  if (groups.includes('kids') && entry.id === 'faq-kids-play') priority += 5;
+  if (groups.includes('elderly') && entry.id === 'faq-elderly-asthma') priority += 4;
+  if (groups.includes('pets') && entry.id === 'faq-pets-care') priority += 4;
+  if (
+    profile.budget === 'low' &&
+    (entry.id === 'faq-low-budget' || entry.id === 'faq-diy-purifier')
+  ) {
+    priority += 4;
+  }
+  if (
+    (profile.cookingFuel === 'lpg_gas' || profile.cookingFuel === 'biomass_solid') &&
+    (entry.id === 'faq-cooking-pollution' || entry.id === 'faq-gas-vs-electric')
+  ) {
+    priority += 3;
+  }
+  if (profile.heatingSource === 'wood_coal' && entry.id === 'faq-cleaner-heating') priority += 4;
+  if (
+    (profile.commuteMode === 'walking_cycling' || profile.commuteMode === 'public_transit') &&
+    (entry.id === 'faq-mask-choice' || entry.id === 'faq-commute-traffic')
+  ) {
+    priority += 3;
+  }
+  if (
+    usAqi > FAQ_MATCHER_CONFIG.highSmogAqiThreshold &&
+    (entry.id === 'faq-ventilate-timing' ||
+      entry.id === 'faq-mask-choice' ||
+      entry.id === 'faq-outdoor-exercise')
+  ) {
+    priority += 2;
+  }
+
+  return priority;
+}
+
 /**
  * Selects 6 to 8 high-relevance FAQ chips prioritized for the user's household profile and AQI.
+ *
+ * @param profile - Household setup and sensitivity groups.
+ * @param usAqi - Current local US AQI value.
+ * @param limit - Target number of chips clamped between 6 and 8.
+ * @returns Ordered list of top `FaqEntry` chips.
  */
-export function getSuggestedFaqEntries(profile: UserProfile, usAqi: number, limit = 7): FaqEntry[] {
-  const boundedLimit = Math.min(8, Math.max(6, limit));
+export function getSuggestedFaqEntries(
+  profile: UserProfile,
+  usAqi: number,
+  limit: number = FAQ_MATCHER_CONFIG.suggestedChipDefault
+): FaqEntry[] {
+  const boundedLimit = Math.min(
+    FAQ_MATCHER_CONFIG.suggestedChipMax,
+    Math.max(FAQ_MATCHER_CONFIG.suggestedChipMin, limit)
+  );
 
-  const scored = FAQ_ENTRIES.map((entry, idx) => {
-    let priority = 0;
-
-    if (
-      profile.householdGroups.includes('respiratory') &&
-      (entry.id === 'faq-elderly-asthma' || entry.id === 'faq-see-doctor')
-    ) {
-      priority += 5;
-    }
-    if (profile.householdGroups.includes('kids') && entry.id === 'faq-kids-play') {
-      priority += 5;
-    }
-    if (profile.householdGroups.includes('elderly') && entry.id === 'faq-elderly-asthma') {
-      priority += 4;
-    }
-    if (profile.householdGroups.includes('pets') && entry.id === 'faq-pets-care') {
-      priority += 4;
-    }
-    if (
-      profile.budget === 'low' &&
-      (entry.id === 'faq-low-budget' || entry.id === 'faq-diy-purifier')
-    ) {
-      priority += 4;
-    }
-    if (
-      (profile.cookingFuel === 'lpg_gas' || profile.cookingFuel === 'biomass_solid') &&
-      (entry.id === 'faq-cooking-pollution' || entry.id === 'faq-gas-vs-electric')
-    ) {
-      priority += 3;
-    }
-    if (profile.heatingSource === 'wood_coal' && entry.id === 'faq-cleaner-heating') {
-      priority += 4;
-    }
-    if (
-      (profile.commuteMode === 'walking_cycling' || profile.commuteMode === 'public_transit') &&
-      (entry.id === 'faq-mask-choice' || entry.id === 'faq-commute-traffic')
-    ) {
-      priority += 3;
-    }
-    if (
-      usAqi > 150 &&
-      (entry.id === 'faq-ventilate-timing' ||
-        entry.id === 'faq-mask-choice' ||
-        entry.id === 'faq-outdoor-exercise')
-    ) {
-      priority += 2;
-    }
-
-    return { entry, priority, idx };
-  });
-
-  scored.sort((a, b) => b.priority - a.priority || a.idx - b.idx);
-  return scored.slice(0, boundedLimit).map((item) => item.entry);
+  return FAQ_ENTRIES.map((entry, idx) => ({
+    entry,
+    priority: scoreSuggestedFaq(entry, profile, usAqi),
+    idx,
+  }))
+    .sort((a, b) => b.priority - a.priority || a.idx - b.idx)
+    .slice(0, boundedLimit)
+    .map((item) => item.entry);
 }
 
 /**
  * Generates a deterministic cache key from normalized question, AQI band, and household profile.
+ *
+ * @param question - User question string.
+ * @param usAqi - Current US AQI reading.
+ * @param profile - Household profile affecting guidance.
+ * @returns Canonical cache lookup key.
  */
 export function buildChatCacheKey(question: string, usAqi: number, profile: UserProfile): string {
   const normQ = normalizeQuestion(question) || sanitizeText(question, 200).toLowerCase();
-  const aqiBucket = Math.floor(Math.max(0, usAqi) / 25) * 25;
+  const bucket = FAQ_MATCHER_CONFIG.aqiBucketSize;
+  const aqiBucket = Math.floor(Math.max(0, usAqi) / bucket) * bucket;
   const groups = [...profile.householdGroups].sort().join(',');
   const profileHash = [
     profile.budget,
@@ -359,7 +388,7 @@ interface CacheRecord {
 }
 
 /**
- * Bounded TTL in-memory cache for chat answers.
+ * Bounded TTL in-memory LRU cache for chat answers.
  */
 export class ChatAnswerCache {
   private readonly store = new Map<string, CacheRecord>();
@@ -374,6 +403,7 @@ export class ChatAnswerCache {
     this.ttlMs = ttlMs;
   }
 
+  /** Retrieves a cached reply if present and unexpired, refreshing LRU recency. */
   get(key: string, now = Date.now()): string | null {
     const entry = this.store.get(key);
     if (!entry) return null;
@@ -381,12 +411,12 @@ export class ChatAnswerCache {
       this.store.delete(key);
       return null;
     }
-    // Refresh LRU order
     this.store.delete(key);
     this.store.set(key, entry);
     return entry.reply;
   }
 
+  /** Stores a reply under `key`, evicting oldest entries once `maxEntries` is reached. */
   set(key: string, reply: string, now = Date.now()): void {
     if (this.store.has(key)) {
       this.store.delete(key);
@@ -399,13 +429,16 @@ export class ChatAnswerCache {
     this.store.set(key, { reply, expiresAt: now + this.ttlMs });
   }
 
+  /** Removes all cached answers. */
   clear(): void {
     this.store.clear();
   }
 
+  /** Current count of stored entries. */
   get size(): number {
     return this.store.size;
   }
 }
 
+/** Shared server-side TTL cache for generated Gemini chat answers. */
 export const chatAnswerCache = new ChatAnswerCache();

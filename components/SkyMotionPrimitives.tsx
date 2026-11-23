@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Pure-CSS moving cloud and gliding bird primitives shared by
+ * the hero sky overlay and full-page sky backdrop.
+ */
+
 'use client';
 
 import { OpenWingBird } from '@/components/OpenWingBird';
@@ -11,7 +16,10 @@ interface MovingSkyCloudProps {
 }
 
 /**
- * Cumulus cloud that drifts smoothly left-to-right across the sky using pure CSS keyframes.
+ * Renders a layered cumulus cloud that drifts left-to-right using CSS keyframes.
+ *
+ * @param props - Positioning, keyframe duration, scale, opacity, and blur flags.
+ * @returns Decorative moving cloud element.
  */
 export function MovingSkyCloud({
   topClass,
@@ -48,7 +56,10 @@ interface FlyingSkyBirdProps {
 }
 
 /**
- * Open-winged bird gliding left-to-right across the sky using pure CSS keyframes.
+ * Renders an open-winged bird gliding left-to-right across the sky using pure CSS keyframes.
+ *
+ * @param props - Positioning, glide motion, flap timing, size, and tint classes.
+ * @returns Decorative flying bird wrapper element.
  */
 export function FlyingSkyBird({
   topClass,

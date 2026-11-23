@@ -3,8 +3,8 @@
  */
 import { NextRequest } from 'next/server';
 import { GET as getAqiRoute } from '@/app/api/aqi/route';
-import { POST as postRecommendRoute } from '@/app/api/recommend/route';
 import { POST as postChatRoute } from '@/app/api/chat/route';
+import { POST as postRecommendRoute } from '@/app/api/recommend/route';
 import { getFallbackAqiReading } from '@/lib/aqi';
 import { DEFAULT_PROFILE } from '@/lib/constants';
 import { buildFallbackPlan } from '@/lib/fallbackPlan';

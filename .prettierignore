@@ -1,0 +1,8 @@
+.next/
+node_modules/
+coverage/
+out/
+dist/
+tsconfig.tsbuildinfo
+bun.lock
+package-lock.json

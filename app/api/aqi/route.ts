@@ -1,50 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';
+/**
+ * @fileoverview Live AQI API route handler (`GET /api/aqi`) proxying Open-Meteo
+ * geocoding and pollutant measurements with rate limiting and edge caching.
+ */
+
+import { type NextRequest, NextResponse } from 'next/server';
+import { toErrorResponse } from '@/lib/apiResponse';
 import { fetchOpenMeteoAqi } from '@/lib/aqi';
-import { createApiErrorBody } from '@/lib/gemini';
-import { aqiRateLimiter, getClientIp } from '@/lib/rateLimit';
+import { AQI_CACHE_CONTROL_HEADER } from '@/lib/constants';
+import { AppError } from '@/lib/errors';
+import { aqiRateLimiter, getClientIp, getRetryAfterSeconds } from '@/lib/rateLimit';
 import { aqiQuerySchema } from '@/lib/schemas';
 
 /**
- * GET /api/aqi?city=Delhi OR /api/aqi?lat=28.61&lon=77.20
- * Fetches live US AQI, PM2.5, PM10, and NO2 from Open-Meteo with 15-min caching.
+ * Handles `GET /api/aqi?city=...` or `GET /api/aqi?lat=...&lon=...`.
+ *
+ * @param request - Incoming Next.js GET request.
+ * @returns JSON `{ aqi }` on success or a standardized error response.
  */
-export async function GET(request: NextRequest) {
-  const clientIp = getClientIp(request);
-  const rate = aqiRateLimiter.check(clientIp);
-
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const rate = aqiRateLimiter.check(getClientIp(request));
   if (!rate.allowed) {
-    return NextResponse.json(
-      createApiErrorBody(
-        'RATE_LIMITED',
+    return toErrorResponse(
+      new AppError(
         'Too many air-quality lookups. Please wait a minute and try again.',
-        true
-      ),
-      {
-        status: 429,
-        headers: { 'Retry-After': String(Math.ceil((rate.resetAt - Date.now()) / 1000)) },
-      }
+        429,
+        true,
+        'RATE_LIMITED',
+        { 'Retry-After': getRetryAfterSeconds(rate.resetAt) }
+      )
     );
   }
 
   const { searchParams } = new URL(request.url);
-  const rawCity = searchParams.get('city');
-  const rawLat = searchParams.get('lat');
-  const rawLon = searchParams.get('lon');
-
   const parsed = aqiQuerySchema.safeParse({
-    city: rawCity ?? undefined,
-    lat: rawLat !== null ? rawLat : undefined,
-    lon: rawLon !== null ? rawLon : undefined,
+    city: searchParams.get('city') ?? undefined,
+    lat: searchParams.get('lat') ?? undefined,
+    lon: searchParams.get('lon') ?? undefined,
   });
 
   if (!parsed.success) {
-    return NextResponse.json(
-      createApiErrorBody(
-        'VALIDATION_ERROR',
+    return toErrorResponse(
+      new AppError(
         parsed.error.issues[0]?.message ?? 'Invalid location query parameters.',
-        false
-      ),
-      { status: 400 }
+        400,
+        false,
+        'VALIDATION_ERROR'
+      )
     );
   }
 
@@ -54,28 +55,26 @@ export async function GET(request: NextRequest) {
       { aqi },
       {
         status: 200,
-        headers: {
-          'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=300',
-        },
+        headers: { 'Cache-Control': AQI_CACHE_CONTROL_HEADER },
       }
     );
   } catch (err) {
-    const rawMsg = err instanceof Error ? err.message : '';
-    const isNotFound = rawMsg.toLowerCase().includes('not found');
+    const appError =
+      err instanceof AppError
+        ? err
+        : new AppError(
+            'Unable to reach the live air quality service right now.',
+            502,
+            true,
+            'AQI_UPSTREAM_ERROR'
+          );
+
     console.error('[AirWise][/api/aqi] Lookup failed:', {
-      status: isNotFound ? 404 : 502,
-      detail: rawMsg || 'Unknown AQI lookup error',
+      status: appError.statusCode,
+      code: appError.code,
+      detail: err instanceof Error ? err.message : 'Unknown AQI lookup error',
     });
 
-    return NextResponse.json(
-      createApiErrorBody(
-        isNotFound ? 'LOCATION_NOT_FOUND' : 'AQI_UPSTREAM_ERROR',
-        isNotFound
-          ? 'Location not found. Please check the city spelling or try nearby coordinates.'
-          : 'Unable to reach the live air quality service right now.',
-        !isNotFound
-      ),
-      { status: isNotFound ? 404 : 502 }
-    );
+    return toErrorResponse(appError);
   }
 }

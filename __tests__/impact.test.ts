@@ -5,10 +5,21 @@ import {
   calculateImpactMetrics,
   combineReductionPercentages,
   computeBaselineMetrics,
+  computeCookingPm25Penalty,
+  computeInfiltrationFactor,
   flattenPlanItems,
 } from '@/lib/impact';
 
 describe('Impact calculation engine', () => {
+  it('computes lower indoor infiltration for HEPA/HVAC than open windows', () => {
+    expect(computeInfiltrationFactor('hepa_purifier')).toBeLessThan(
+      computeInfiltrationFactor('natural_windows')
+    );
+    expect(computeCookingPm25Penalty('biomass_solid')).toBeGreaterThan(
+      computeCookingPm25Penalty('induction')
+    );
+  });
+
   it('computes higher baseline exposure for solid-fuel cooking than induction', () => {
     const aqi = getFallbackAqiReading('Lahore');
     const biomass = computeBaselineMetrics(

@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Static winter-smog and indoor air quality FAQ dataset powering
+ * zero-latency chip answers and smart keyword matching without API calls.
+ */
+
 import type { FaqEntry } from '@/types/airwise';
 
 const NOT_MEDICAL_ADVICE_NOTE =

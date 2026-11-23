@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Zod-validated server-side environment loader ensuring secrets like
+ * `GEMINI_API_KEY` remain strictly isolated on the server.
+ */
+
 import { z } from 'zod';
 
 const serverEnvSchema = z.object({
@@ -11,8 +16,10 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 let cachedEnv: ServerEnv | null = null;
 
 /**
- * Validates and returns server-side environment variables.
- * Never exposes secrets to client components.
+ * Validates and returns server-side environment variables (cached outside tests).
+ *
+ * @returns Parsed `ServerEnv` object.
+ * @throws {Error} When required environment validation fails.
  */
 export function getServerEnv(): ServerEnv {
   if (cachedEnv && process.env.NODE_ENV !== 'test') {
@@ -37,6 +44,8 @@ export function getServerEnv(): ServerEnv {
 
 /**
  * Checks whether a non-placeholder Gemini API key is configured on the server.
+ *
+ * @returns `true` if a live `GEMINI_API_KEY` value is present.
  */
 export function hasGeminiApiKey(): boolean {
   const key = getServerEnv().GEMINI_API_KEY;

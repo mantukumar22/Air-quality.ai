@@ -1,6 +1,28 @@
 /**
- * Domain types for AirWise: Urban Air Quality Assistant.
+ * @fileoverview Domain types for AirWise, re-exporting Zod-inferred schemas as the
+ * single source of truth alongside discriminated unions for API responses, AQI telemetry, and UI state.
  */
+
+import type { GeminiRecommendationPlan } from '@/lib/schemas';
+
+export type {
+  AqiContextInput,
+  AqiQuery,
+  BudgetLevel,
+  ChatMessageInput,
+  ChatRequestPayload,
+  CommuteMode,
+  CookingFuel,
+  GeminiRecommendationPlan,
+  HeatingSource,
+  HomeType,
+  HouseholdGroup,
+  RecommendationCategory,
+  RecommendationItem,
+  RecommendRequestPayload,
+  UserProfile,
+  VentilationType,
+} from '@/lib/schemas';
 
 export type AqiCategoryId =
   'good' | 'moderate' | 'sensitive' | 'unhealthy' | 'very_unhealthy' | 'hazardous';
@@ -31,78 +53,16 @@ export interface AqiReading {
   no2: number;
   observedAt: string;
   category: AqiCategoryMeta;
-  isFallback?: boolean;
+  isFallback?: boolean | undefined;
   source: string;
 }
 
-export type HouseholdGroup = 'kids' | 'elderly' | 'respiratory' | 'pets';
-
-export type CommuteMode =
-  'walking_cycling' | 'public_transit' | 'carpool' | 'private_car' | 'remote';
-
-export type HomeType = 'apartment' | 'detached_house' | 'townhouse' | 'shared_home';
-
-export type VentilationType =
-  'natural_windows' | 'exhaust_fans' | 'hepa_purifier' | 'hvac_filtered';
-
-export type HeatingSource = 'electric' | 'natural_gas' | 'wood_coal' | 'district' | 'none';
-
-export type CookingFuel = 'induction' | 'electric_coil' | 'lpg_gas' | 'biomass_solid';
-
-export type BudgetLevel = 'low' | 'medium' | 'high';
-
-export interface UserProfile {
-  city: string;
-  latitude?: number;
-  longitude?: number;
-  householdGroups: HouseholdGroup[];
-  commuteMode: CommuteMode;
-  homeType: HomeType;
-  ventilation: VentilationType;
-  heatingSource: HeatingSource;
-  cookingFuel: CookingFuel;
-  budget: BudgetLevel;
-}
-
-export type RecommendationCategory =
-  | 'routine_morning'
-  | 'routine_afternoon'
-  | 'routine_evening'
-  | 'indoor_hack'
-  | 'sustainable_alt'
-  | 'vulnerable_care'
-  | 'community_action';
-
-export interface RecommendationItem {
-  id: string;
-  category: RecommendationCategory;
-  title: string;
-  actionSummary: string;
-  whyItWorks: string;
-  pm25ReductionPct: number;
-  emissionReductionPct: number;
-  costTier: BudgetLevel;
-  timeframe: string;
-  isEstimate: boolean;
-}
-
-export interface RecommendationPlan {
-  headline: string;
-  winterSmogContext: string;
-  dailyRoutine: {
-    morning: RecommendationItem[];
-    afternoon: RecommendationItem[];
-    evening: RecommendationItem[];
-  };
-  indoorHacks: RecommendationItem[];
-  sustainableAlternatives: RecommendationItem[];
-  vulnerablePrecautions: RecommendationItem[];
-  communityActions: RecommendationItem[];
-  neighborShareSummary: string;
-  disclaimer: string;
+export interface RecommendationPlan extends GeminiRecommendationPlan {
   generatedAt: string;
-  isFallback?: boolean;
+  isFallback?: boolean | undefined;
 }
+
+export type RecommendationFilterTab = 'all' | 'routine' | 'indoor' | 'sustainable' | 'vulnerable';
 
 export interface ImpactMetrics {
   baselineExposureUgM3: number;
@@ -130,27 +90,58 @@ export interface FaqEntry {
   category: FaqCategory;
 }
 
+export type AppErrorCode =
+  | 'RATE_LIMITED'
+  | 'INVALID_JSON'
+  | 'INVALID_REQUEST'
+  | 'VALIDATION_ERROR'
+  | 'EMPTY_MESSAGE'
+  | 'LOCATION_NOT_FOUND'
+  | 'AQI_UPSTREAM_ERROR'
+  | 'CONFIG_MISSING'
+  | 'AUTH_ERROR'
+  | 'MODEL_NOT_FOUND'
+  | 'TIMEOUT'
+  | 'SERVICE_UNAVAILABLE'
+  | 'UPSTREAM_TRANSIENT'
+  | 'NETWORK_ERROR'
+  | 'EMPTY_RESPONSE'
+  | 'MALFORMED_JSON'
+  | 'SCHEMA_MISMATCH'
+  | 'CIRCUIT_OPEN'
+  | 'UPSTREAM_ERROR';
+
 export interface ApiErrorDetail {
-  code: string;
+  code: AppErrorCode;
   message: string;
   retryable: boolean;
 }
 
-export interface ChatApiResponse {
-  reply: string;
-  source: ChatResponseSource;
-  faqId?: string;
-  impact?: string;
-  notice?: string;
-}
+/** Discriminated union representing all valid HTTP 200 responses from POST /api/chat. */
+export type ChatApiResponse =
+  | {
+      source: 'faq';
+      reply: string;
+      faqId: string;
+      impact: string;
+    }
+  | {
+      source: 'cache' | 'gemini';
+      reply: string;
+    }
+  | {
+      source: 'fallback';
+      reply: string;
+      notice: string;
+    };
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
-  source?: ChatResponseSource;
-  impact?: string;
-  notice?: string;
-  retryQuestion?: string;
+  source?: ChatResponseSource | undefined;
+  impact?: string | undefined;
+  notice?: string | undefined;
+  retryQuestion?: string | undefined;
 }

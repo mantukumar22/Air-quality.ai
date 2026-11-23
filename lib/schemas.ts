@@ -1,15 +1,25 @@
+/**
+ * @fileoverview Single source of truth for runtime Zod validation schemas and
+ * static domain types inferred via `z.infer`.
+ */
+
 import { z } from 'zod';
 import { INPUT_LIMITS } from '@/lib/constants';
 import { sanitizeText } from '@/lib/sanitize';
 
-/** Validates city or lat/lon parameters for /api/aqi. */
+/** Validates city or lat/lon query parameters for GET /api/aqi. */
 export const aqiQuerySchema = z
   .object({
     city: z
       .string()
       .trim()
       .transform((val) => sanitizeText(val, INPUT_LIMITS.cityMaxLength))
-      .pipe(z.string().min(2, 'City must be at least 2 characters').max(INPUT_LIMITS.cityMaxLength))
+      .pipe(
+        z
+          .string()
+          .min(INPUT_LIMITS.cityMinLength, 'City must be at least 2 characters')
+          .max(INPUT_LIMITS.cityMaxLength)
+      )
       .optional(),
     lat: z.coerce.number().min(-90).max(90).optional(),
     lon: z.coerce.number().min(-180).max(180).optional(),
@@ -46,7 +56,7 @@ export const heatingSourceEnum = z.enum([
 export const cookingFuelEnum = z.enum(['induction', 'electric_coil', 'lpg_gas', 'biomass_solid']);
 export const budgetLevelEnum = z.enum(['low', 'medium', 'high']);
 
-/** Validates household profile submitted by user. */
+/** Validates household profile submitted by the user. */
 export const userProfileSchema = z.object({
   city: z
     .string()
@@ -55,12 +65,15 @@ export const userProfileSchema = z.object({
     .pipe(
       z
         .string()
-        .min(2, 'Please enter a city or neighborhood name (at least 2 characters).')
+        .min(
+          INPUT_LIMITS.cityMinLength,
+          'Please enter a city or neighborhood name (at least 2 characters).'
+        )
         .max(INPUT_LIMITS.cityMaxLength, 'City name must be 100 characters or fewer.')
     ),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
-  householdGroups: z.array(householdGroupEnum).max(4),
+  householdGroups: z.array(householdGroupEnum).max(INPUT_LIMITS.householdGroupsMax),
   commuteMode: commuteModeEnum,
   homeType: homeTypeEnum,
   ventilation: ventilationTypeEnum,
@@ -79,14 +92,16 @@ export const aqiContextSchema = z.object({
   pm25: z.number().min(0).max(2000),
   pm10: z.number().min(0).max(3000),
   no2: z.number().min(0).max(2000),
-  categoryLabel: z.string().trim().max(60),
+  categoryLabel: z.string().trim().max(INPUT_LIMITS.categoryLabelMaxLength),
 });
 
+/** Validates POST /api/recommend request payloads. */
 export const recommendRequestSchema = z.object({
   profile: userProfileSchema,
   aqi: aqiContextSchema,
 });
 
+/** Validates individual chat message payloads submitted to /api/chat. */
 export const chatMessageInputSchema = z.object({
   role: z.enum(['user', 'assistant']),
   content: z
@@ -101,6 +116,7 @@ export const chatMessageInputSchema = z.object({
     ),
 });
 
+/** Validates POST /api/chat request payloads. */
 export const chatRequestSchema = z.object({
   profile: userProfileSchema,
   aqi: aqiContextSchema,
@@ -135,7 +151,7 @@ export const recommendationItemSchema = z.object({
   isEstimate: z.literal(true).default(true),
 });
 
-/** Validates the full JSON structure returned by Gemini. */
+/** Validates the full JSON recommendation structure returned by Gemini. */
 export const recommendationPlanSchema = z.object({
   headline: z.string().trim().min(5).max(160),
   winterSmogContext: z.string().trim().min(10).max(340),
@@ -151,3 +167,20 @@ export const recommendationPlanSchema = z.object({
   neighborShareSummary: z.string().trim().min(20).max(600),
   disclaimer: z.string().trim().min(15).max(300),
 });
+
+export type AqiQuery = z.infer<typeof aqiQuerySchema>;
+export type HouseholdGroup = z.infer<typeof householdGroupEnum>;
+export type CommuteMode = z.infer<typeof commuteModeEnum>;
+export type HomeType = z.infer<typeof homeTypeEnum>;
+export type VentilationType = z.infer<typeof ventilationTypeEnum>;
+export type HeatingSource = z.infer<typeof heatingSourceEnum>;
+export type CookingFuel = z.infer<typeof cookingFuelEnum>;
+export type BudgetLevel = z.infer<typeof budgetLevelEnum>;
+export type UserProfile = z.infer<typeof userProfileSchema>;
+export type AqiContextInput = z.infer<typeof aqiContextSchema>;
+export type ChatMessageInput = z.infer<typeof chatMessageInputSchema>;
+export type ChatRequestPayload = z.infer<typeof chatRequestSchema>;
+export type RecommendRequestPayload = z.infer<typeof recommendRequestSchema>;
+export type RecommendationCategory = z.infer<typeof recommendationCategoryEnum>;
+export type RecommendationItem = z.infer<typeof recommendationItemSchema>;
+export type GeminiRecommendationPlan = z.infer<typeof recommendationPlanSchema>;

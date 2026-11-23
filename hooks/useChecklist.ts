@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Custom hook persisting completed household checklist item IDs in
+ * browser `localStorage` via `useSyncExternalStore` for hydration-safe sync.
+ */
+
 'use client';
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
@@ -25,6 +30,7 @@ function getChecklistSnapshot(): string {
   try {
     return window.localStorage.getItem(STORAGE_KEYS.checklist) ?? '[]';
   } catch {
+    // Non-fatal: storage disabled in restricted browsing contexts
     return '[]';
   }
 }
@@ -48,12 +54,14 @@ function writeChecklist(next: string[]): void {
     window.localStorage.setItem(STORAGE_KEYS.checklist, JSON.stringify(next));
     window.dispatchEvent(new Event(CHECKLIST_CHANGE_EVENT));
   } catch {
-    // Ignore storage errors
+    // Non-fatal: ignore storage quota exceeded errors
   }
 }
 
 /**
- * Persists completed air-quality action items in browser localStorage using useSyncExternalStore.
+ * Persists completed air-quality action items in browser `localStorage`.
+ *
+ * @returns Checked item IDs, predicate helper, toggle handler, and reset handler.
  */
 export function useChecklist(): UseChecklistResult {
   const rawSnapshot = useSyncExternalStore(
@@ -63,7 +71,6 @@ export function useChecklist(): UseChecklistResult {
   );
 
   const checkedIds = useMemo(() => parseChecklistJson(rawSnapshot), [rawSnapshot]);
-
   const isChecked = useCallback((id: string) => checkedIds.includes(id), [checkedIds]);
 
   const toggleItem = useCallback((id: string) => {

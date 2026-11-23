@@ -1,10 +1,17 @@
+/**
+ * @fileoverview Ambient hero sky backdrop layer rendering drifting clouds and
+ * flying open-winged birds via pure CSS keyframe animations.
+ */
+
 'use client';
 
 import { FlyingSkyBird, MovingSkyCloud } from '@/components/SkyMotionPrimitives';
 
 /**
- * Hero ambient sky layer with clouds gliding smoothly left-to-right
+ * Renders the hero ambient sky layer with clouds gliding smoothly left-to-right
  * and open-winged birds soaring across the hero canvas.
+ *
+ * @returns Decorative hero sky overlay element.
  */
 export function HeroSkyLayer() {
   return (

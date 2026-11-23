@@ -54,7 +54,9 @@ describe('FAQ Knowledge Base & Smart Matcher', () => {
   });
 
   it('personalizes FAQ answers using live AQI and household profile', () => {
-    const entry = FAQ_ENTRIES.find((item) => item.id === 'faq-kids-play')!;
+    const entry = FAQ_ENTRIES.find((item) => item.id === 'faq-kids-play');
+    expect(entry).toBeDefined();
+    if (!entry) throw new Error('Expected faq-kids-play fixture to exist');
     const aqi = getFallbackAqiReading('Lahore');
     const profile: UserProfile = {
       ...DEFAULT_PROFILE,

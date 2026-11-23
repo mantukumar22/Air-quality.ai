@@ -1,10 +1,25 @@
+/**
+ * @fileoverview Primary top navigation bar blended over the Earth sky canvas.
+ */
+
 'use client';
 
 import { SmartImage } from '@/components/SmartImage';
 import airwiseLogoImg from '@/src/assets/images/airwise_logo_mark_1794986660920.jpg';
 
+const NAV_LINKS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: '#overview', label: 'Overview' },
+  { href: '#scenarios', label: 'Playbooks' },
+  { href: '#action-plan', label: 'Action Plan' },
+  { href: '#impact', label: 'Impact' },
+  { href: '#community', label: 'Community' },
+];
+
 /**
- * Primary top navigation blended cleanly with the Earth sky backdrop.
+ * Renders the top semantic `<header>` with brand logo, primary navigation links,
+ * and a quick anchor CTA to the follow-up assistant.
+ *
+ * @returns Header navigation landmark.
  */
 export function Header() {
   return (
@@ -30,36 +45,15 @@ export function Header() {
           aria-label="Primary navigation"
           className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-800 dark:text-slate-200"
         >
-          <a
-            href="#overview"
-            className="whitespace-nowrap shrink-0 hover:text-[#4533CD] dark:hover:text-sky-300 hover:underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] rounded px-1 py-1"
-          >
-            Overview
-          </a>
-          <a
-            href="#scenarios"
-            className="whitespace-nowrap shrink-0 hover:text-[#4533CD] dark:hover:text-sky-300 hover:underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] rounded px-1 py-1"
-          >
-            Playbooks
-          </a>
-          <a
-            href="#action-plan"
-            className="whitespace-nowrap shrink-0 hover:text-[#4533CD] dark:hover:text-sky-300 hover:underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] rounded px-1 py-1"
-          >
-            Action Plan
-          </a>
-          <a
-            href="#impact"
-            className="whitespace-nowrap shrink-0 hover:text-[#4533CD] dark:hover:text-sky-300 hover:underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] rounded px-1 py-1"
-          >
-            Impact
-          </a>
-          <a
-            href="#community"
-            className="whitespace-nowrap shrink-0 hover:text-[#4533CD] dark:hover:text-sky-300 hover:underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] rounded px-1 py-1"
-          >
-            Community
-          </a>
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="whitespace-nowrap shrink-0 hover:text-[#4533CD] dark:hover:text-sky-300 hover:underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] rounded px-1 py-1"
+            >
+              {link.label}
+            </a>
+          ))}
         </nav>
 
         <div className="shrink-0">

@@ -1,23 +1,23 @@
+/**
+ * @fileoverview Root interactive AirWise workspace orchestrating live AQI telemetry,
+ * household profile customization, tailored recommendations, impact tracking, and Q&A.
+ */
+
 'use client';
 
+import { ArrowUp } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-import { ArrowUp } from 'lucide-react';
 import { AqiHero } from '@/components/AqiHero';
 import { FeatureTrio } from '@/components/FeatureTrio';
 import { MedicalDisclaimer } from '@/components/MedicalDisclaimer';
 import { ProfileForm } from '@/components/ProfileForm';
-import { RecommendationList, type RecommendationFilterTab } from '@/components/RecommendationList';
+import { RecommendationList } from '@/components/RecommendationList';
 import { ScenarioShowcase } from '@/components/ScenarioShowcase';
 import { SkyBackdrop } from '@/components/SkyBackdrop';
-import { useAqi } from '@/hooks/useAqi';
-import { useChecklist } from '@/hooks/useChecklist';
-import { useRecommendations } from '@/hooks/useRecommendations';
-import { useTheme } from '@/hooks/useTheme';
-import { getFallbackAqiReading } from '@/lib/aqi';
-import { DEFAULT_PROFILE } from '@/lib/constants';
-import { calculateImpactMetrics } from '@/lib/impact';
-import type { UserProfile } from '@/types/airwise';
+import { useAqi, useChecklist, useRecommendations, useTheme } from '@/hooks';
+import { DEFAULT_PROFILE, calculateImpactMetrics, getFallbackAqiReading } from '@/lib';
+import type { RecommendationFilterTab, UserProfile } from '@/types/airwise';
 
 const ImpactDashboard = dynamic(
   () => import('@/components/ImpactDashboard').then((m) => m.ImpactDashboard),
@@ -60,8 +60,10 @@ function subscribeNoop(): () => void {
 }
 
 /**
- * Main interactive AirWise workspace following the alternating light-cream,
- * pastel-trio, and deep-emerald band cadence.
+ * Main interactive AirWise workspace coordinating hooks, code-split panels,
+ * and alternating sky/forest/pastel visual bands.
+ *
+ * @returns Full interactive client workspace wrapped around `<main>`.
  */
 export function AirWiseApp() {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
@@ -145,7 +147,6 @@ export function AirWiseApp() {
       />
 
       <main id="main-content" className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6">
-        {/* Deep Forest Band: Winter Smog Playbooks */}
         {hasMounted ? (
           <ScenarioShowcase onSelectCategory={setActiveTab} />
         ) : (
@@ -156,13 +157,9 @@ export function AirWiseApp() {
           />
         )}
 
-        {/* 3-Column Pastel Bento Band */}
         <FeatureTrio />
-
-        {/* Medical Safety Notice */}
         <MedicalDisclaimer />
 
-        {/* Two-column workspace: Household Profile + Before/After Impact Dashboard */}
         <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
           <div className="lg:col-span-5">
             {hasMounted ? (
@@ -189,7 +186,6 @@ export function AirWiseApp() {
           </div>
         </div>
 
-        {/* Structured Recommendations & Persistent Checklist */}
         {hasMounted ? (
           plan && (
             <RecommendationList
@@ -211,7 +207,6 @@ export function AirWiseApp() {
           />
         )}
 
-        {/* Deep Forest Band: Community Actions & Neighbor Share Summary */}
         {hasMounted && plan && (
           <CommunitySection
             communityActions={plan.communityActions}
@@ -221,10 +216,8 @@ export function AirWiseApp() {
           />
         )}
 
-        {/* Grounded Streaming AI Follow-up */}
         {hasMounted && <ChatPanel profile={profile} aqi={aqi} />}
 
-        {/* Iridescent Liquid Glass Closing Invitation Band */}
         <section
           aria-label="Back to live air quality summary"
           className="liquid-glass-card-iridescent rounded-3xl px-6 py-8 text-center"

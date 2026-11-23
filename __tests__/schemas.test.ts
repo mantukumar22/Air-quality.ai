@@ -1,12 +1,12 @@
+import { getFallbackAqiReading } from '@/lib/aqi';
+import { DEFAULT_PROFILE } from '@/lib/constants';
+import { buildFallbackPlan } from '@/lib/fallbackPlan';
 import {
   aqiQuerySchema,
   chatRequestSchema,
   recommendationPlanSchema,
   userProfileSchema,
 } from '@/lib/schemas';
-import { DEFAULT_PROFILE } from '@/lib/constants';
-import { buildFallbackPlan } from '@/lib/fallbackPlan';
-import { getFallbackAqiReading } from '@/lib/aqi';
 
 describe('Zod request and response schemas', () => {
   it('validates aqiQuerySchema with city or coordinates and rejects empty query', () => {

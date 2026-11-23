@@ -1,8 +1,14 @@
+/**
+ * @fileoverview Non-medical-advice informational disclaimer banner rendered as a Server Component.
+ */
+
 import { ShieldAlert } from 'lucide-react';
 import { MEDICAL_DISCLAIMER } from '@/lib/constants';
 
 /**
  * Prominent medical & environmental safety disclaimer.
+ *
+ * @returns Accessible `<aside>` banner noting guidance is not medical advice.
  */
 export function MedicalDisclaimer() {
   return (

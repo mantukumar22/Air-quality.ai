@@ -1,8 +1,14 @@
+/**
+ * @fileoverview Household and lifestyle profile form with debounced city lookup,
+ * runtime-validated select dropdowns, and accessible validation feedback.
+ */
+
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Loader2, SlidersHorizontal } from 'lucide-react';
-import { INPUT_LIMITS } from '@/lib/constants';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ProfileSelectField, type SelectOption } from '@/components/profile/ProfileSelectField';
+import { INPUT_LIMITS, UI_TIMING_MS } from '@/lib/constants';
 import { sanitizeText } from '@/lib/sanitize';
 import type {
   BudgetLevel,
@@ -15,7 +21,7 @@ import type {
   VentilationType,
 } from '@/types/airwise';
 
-interface ProfileFormProps {
+export interface ProfileFormProps {
   profile: UserProfile;
   isGenerating: boolean;
   onProfileChange: (next: UserProfile) => void;
@@ -23,22 +29,62 @@ interface ProfileFormProps {
   onCityDebouncedChange?: (city: string) => void;
 }
 
-const HOUSEHOLD_OPTIONS: Array<{ id: HouseholdGroup; label: string }> = [
+const HOUSEHOLD_OPTIONS: ReadonlyArray<{ id: HouseholdGroup; label: string }> = [
   { id: 'kids', label: 'Young children' },
   { id: 'elderly', label: 'Older adults (65+)' },
   { id: 'respiratory', label: 'Asthma / respiratory' },
   { id: 'pets', label: 'Indoor pets' },
 ];
 
-const BUDGET_OPTIONS: Array<{ id: BudgetLevel; label: string; hint: string }> = [
+const BUDGET_OPTIONS: ReadonlyArray<{ id: BudgetLevel; label: string; hint: string }> = [
   { id: 'low', label: 'Low', hint: 'Zero-cost & DIY' },
   { id: 'medium', label: 'Medium', hint: 'Filters & swaps' },
   { id: 'high', label: 'High', hint: 'Appliances & upgrades' },
 ];
 
+const COMMUTE_OPTIONS: ReadonlyArray<SelectOption<CommuteMode>> = [
+  { value: 'public_transit', label: 'Public transit (bus/metro)' },
+  { value: 'walking_cycling', label: 'Walking or cycling' },
+  { value: 'carpool', label: 'Carpool / rideshare' },
+  { value: 'private_car', label: 'Private car / motorbike' },
+  { value: 'remote', label: 'Work / study from home' },
+];
+
+const HOME_TYPE_OPTIONS: ReadonlyArray<SelectOption<HomeType>> = [
+  { value: 'apartment', label: 'Apartment / flat' },
+  { value: 'detached_house', label: 'Detached house' },
+  { value: 'townhouse', label: 'Townhouse / duplex' },
+  { value: 'shared_home', label: 'Shared / multi-family home' },
+];
+
+const VENTILATION_OPTIONS: ReadonlyArray<SelectOption<VentilationType>> = [
+  { value: 'natural_windows', label: 'Natural window drafts' },
+  { value: 'exhaust_fans', label: 'Kitchen / bath exhaust fans' },
+  { value: 'hepa_purifier', label: 'Portable HEPA purifier' },
+  { value: 'hvac_filtered', label: 'Central HVAC with filter' },
+];
+
+const HEATING_OPTIONS: ReadonlyArray<SelectOption<HeatingSource>> = [
+  { value: 'electric', label: 'Electric / heat pump' },
+  { value: 'natural_gas', label: 'Natural gas / boiler' },
+  { value: 'wood_coal', label: 'Wood, coal, or solid fuel' },
+  { value: 'district', label: 'District / central steam' },
+  { value: 'none', label: 'No active heater' },
+];
+
+const COOKING_OPTIONS: ReadonlyArray<SelectOption<CookingFuel>> = [
+  { value: 'induction', label: 'Induction cooktop' },
+  { value: 'electric_coil', label: 'Standard electric stove' },
+  { value: 'lpg_gas', label: 'LPG / piped natural gas' },
+  { value: 'biomass_solid', label: 'Biomass, charcoal, or kerosene' },
+];
+
 /**
- * Household profile form with input sanitization, debounced city input,
- * accessible field associations (aria-describedby), and >=44px touch targets.
+ * Household profile form with input sanitization, debounced city updates,
+ * accessible `aria-describedby` field associations, and `>= 44px` touch targets.
+ *
+ * @param props - Controlled `UserProfile`, generation loading flag, and change/submit callbacks.
+ * @returns Profile customization section.
  */
 export function ProfileForm({
   profile,
@@ -48,7 +94,6 @@ export function ProfileForm({
   onCityDebouncedChange,
 }: ProfileFormProps) {
   const [cityError, setCityError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -63,16 +108,15 @@ export function ProfileForm({
     onProfileChange({ ...profile, city: value });
     if (cityError) setCityError(null);
 
-    if (onCityDebouncedChange) {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      const trimmed = value.trim();
-      if (trimmed.length >= 3) {
-        debounceTimerRef.current = setTimeout(() => {
-          onCityDebouncedChange(trimmed);
-        }, 650);
-      }
+    if (!onCityDebouncedChange) return;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    const trimmed = value.trim();
+    if (trimmed.length >= INPUT_LIMITS.cityDebounceMinLength) {
+      debounceTimerRef.current = setTimeout(() => {
+        onCityDebouncedChange(trimmed);
+      }, UI_TIMING_MS.cityDebounceMs);
     }
   };
 
@@ -87,23 +131,16 @@ export function ProfileForm({
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const cleanedCity = sanitizeText(profile.city.trim(), INPUT_LIMITS.cityMaxLength);
-    if (cleanedCity.length < 2) {
+    if (cleanedCity.length < INPUT_LIMITS.cityMinLength) {
       setCityError('Please enter a city or neighborhood name (at least 2 characters).');
-      setFormError(null);
-      return;
-    }
-    if (cleanedCity.length > INPUT_LIMITS.cityMaxLength) {
-      setCityError('City name must be 100 characters or fewer.');
-      setFormError(null);
       return;
     }
 
     setCityError(null);
-    setFormError(null);
     onSubmitPlan({
       ...profile,
       city: cleanedCity,
-      householdGroups: profile.householdGroups.slice(0, 4),
+      householdGroups: profile.householdGroups.slice(0, INPUT_LIMITS.householdGroupsMax),
     });
   };
 
@@ -128,15 +165,6 @@ export function ProfileForm({
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-5" noValidate>
-        {formError && (
-          <div
-            role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/60 dark:text-red-300"
-          >
-            {formError}
-          </div>
-        )}
-
         <div>
           <label
             htmlFor="profile-city"
@@ -197,117 +225,42 @@ export function ProfileForm({
         </fieldset>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="profile-commute"
-              className="block text-sm font-medium text-slate-800 dark:text-slate-200"
-            >
-              Primary Commute
-            </label>
-            <select
-              id="profile-commute"
-              value={profile.commuteMode}
-              onChange={(e) =>
-                onProfileChange({ ...profile, commuteMode: e.target.value as CommuteMode })
-              }
-              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
-            >
-              <option value="public_transit">Public transit (bus/metro)</option>
-              <option value="walking_cycling">Walking or cycling</option>
-              <option value="carpool">Carpool / rideshare</option>
-              <option value="private_car">Private car / motorbike</option>
-              <option value="remote">Work / study from home</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="profile-home-type"
-              className="block text-sm font-medium text-slate-800 dark:text-slate-200"
-            >
-              Home Type
-            </label>
-            <select
-              id="profile-home-type"
-              value={profile.homeType}
-              onChange={(e) =>
-                onProfileChange({ ...profile, homeType: e.target.value as HomeType })
-              }
-              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
-            >
-              <option value="apartment">Apartment / flat</option>
-              <option value="detached_house">Detached house</option>
-              <option value="townhouse">Townhouse / duplex</option>
-              <option value="shared_home">Shared / multi-family home</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="profile-ventilation"
-              className="block text-sm font-medium text-slate-800 dark:text-slate-200"
-            >
-              Current Ventilation
-            </label>
-            <select
-              id="profile-ventilation"
-              value={profile.ventilation}
-              onChange={(e) =>
-                onProfileChange({ ...profile, ventilation: e.target.value as VentilationType })
-              }
-              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
-            >
-              <option value="natural_windows">Natural window drafts</option>
-              <option value="exhaust_fans">Kitchen / bath exhaust fans</option>
-              <option value="hepa_purifier">Portable HEPA purifier</option>
-              <option value="hvac_filtered">Central HVAC with filter</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="profile-heating"
-              className="block text-sm font-medium text-slate-800 dark:text-slate-200"
-            >
-              Winter Heating Source
-            </label>
-            <select
-              id="profile-heating"
-              value={profile.heatingSource}
-              onChange={(e) =>
-                onProfileChange({ ...profile, heatingSource: e.target.value as HeatingSource })
-              }
-              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
-            >
-              <option value="electric">Electric / heat pump</option>
-              <option value="natural_gas">Natural gas / boiler</option>
-              <option value="wood_coal">Wood, coal, or solid fuel</option>
-              <option value="district">District / central steam</option>
-              <option value="none">No active heater</option>
-            </select>
-          </div>
-
-          <div className="sm:col-span-2">
-            <label
-              htmlFor="profile-cooking"
-              className="block text-sm font-medium text-slate-800 dark:text-slate-200"
-            >
-              Primary Cooking Fuel
-            </label>
-            <select
-              id="profile-cooking"
-              value={profile.cookingFuel}
-              onChange={(e) =>
-                onProfileChange({ ...profile, cookingFuel: e.target.value as CookingFuel })
-              }
-              className="liquid-input mt-1.5 min-h-[44px] w-full rounded-2xl px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5846E5] dark:text-slate-100"
-            >
-              <option value="induction">Induction cooktop</option>
-              <option value="electric_coil">Standard electric stove</option>
-              <option value="lpg_gas">LPG / piped natural gas</option>
-              <option value="biomass_solid">Biomass, charcoal, or kerosene</option>
-            </select>
-          </div>
+          <ProfileSelectField
+            id="profile-commute"
+            label="Primary Commute"
+            value={profile.commuteMode}
+            options={COMMUTE_OPTIONS}
+            onChange={(commuteMode) => onProfileChange({ ...profile, commuteMode })}
+          />
+          <ProfileSelectField
+            id="profile-home-type"
+            label="Home Type"
+            value={profile.homeType}
+            options={HOME_TYPE_OPTIONS}
+            onChange={(homeType) => onProfileChange({ ...profile, homeType })}
+          />
+          <ProfileSelectField
+            id="profile-ventilation"
+            label="Current Ventilation"
+            value={profile.ventilation}
+            options={VENTILATION_OPTIONS}
+            onChange={(ventilation) => onProfileChange({ ...profile, ventilation })}
+          />
+          <ProfileSelectField
+            id="profile-heating"
+            label="Winter Heating Source"
+            value={profile.heatingSource}
+            options={HEATING_OPTIONS}
+            onChange={(heatingSource) => onProfileChange({ ...profile, heatingSource })}
+          />
+          <ProfileSelectField
+            id="profile-cooking"
+            label="Primary Cooking Fuel"
+            value={profile.cookingFuel}
+            options={COOKING_OPTIONS}
+            wrapperClassName="sm:col-span-2"
+            onChange={(cookingFuel) => onProfileChange({ ...profile, cookingFuel })}
+          />
         </div>
 
         <fieldset>

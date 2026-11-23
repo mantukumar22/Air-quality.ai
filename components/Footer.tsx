@@ -1,10 +1,17 @@
+/**
+ * @fileoverview Semantic application footer displaying brand attribution,
+ * Open-Meteo source notice, and browser-only privacy disclosure.
+ */
+
 'use client';
 
 import { SmartImage } from '@/components/SmartImage';
 import airwiseLogoImg from '@/src/assets/images/airwise_logo_mark_1794986660920.jpg';
 
 /**
- * Clean semantic footer with brand emblem, attribution, and privacy note.
+ * Renders the application footer landmark with emblem and data privacy statement.
+ *
+ * @returns Semantic `<footer>` element.
  */
 export function Footer() {
   return (
